@@ -49,9 +49,6 @@ export const useMarketData = ({
         'zerodha-market-data',
         {
           body: requestBody,
-          headers: {
-            'Content-Type': 'application/json',
-          }
         }
       );
 

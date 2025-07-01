@@ -37,13 +37,15 @@ serve(async (req) => {
     )
 
     let requestBody;
-    const requestText = await req.text();
-    console.log('Raw request text:', requestText);
     
-    if (requestText) {
+    // Handle different content types properly
+    const contentType = req.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+    
+    if (contentType.includes('application/json')) {
       try {
-        requestBody = JSON.parse(requestText);
-        console.log('Parsed request body:', requestBody);
+        requestBody = await req.json();
+        console.log('Parsed JSON request body:', requestBody);
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
         return new Response(
@@ -55,14 +57,34 @@ serve(async (req) => {
         );
       }
     } else {
-      console.error('Empty request body received');
-      return new Response(
-        JSON.stringify({ error: 'Empty request body' }),
-        { 
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      // Try to parse as text and then as JSON for Supabase invoke calls
+      try {
+        const textBody = await req.text();
+        console.log('Raw request text:', textBody);
+        
+        if (textBody) {
+          requestBody = JSON.parse(textBody);
+          console.log('Parsed text as JSON:', requestBody);
+        } else {
+          console.error('Empty request body received');
+          return new Response(
+            JSON.stringify({ error: 'Empty request body' }),
+            { 
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
         }
-      );
+      } catch (parseError) {
+        console.error('Failed to parse request body:', parseError);
+        return new Response(
+          JSON.stringify({ error: 'Invalid request body format' }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     const { symbol, dataType, timeframe } = requestBody;
