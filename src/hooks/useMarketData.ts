@@ -36,7 +36,7 @@ export const useMarketData = ({
     }
 
     // Don't fetch if no access token
-    if (!accessToken) {
+    if (!accessToken || accessToken.trim() === '') {
       setError('Please authenticate with Zerodha to view live market data');
       setLoading(false);
       return;
@@ -46,6 +46,8 @@ export const useMarketData = ({
       setLoading(true);
       setError(null);
       console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha...`);
+      console.log('Access token available:', accessToken ? 'Yes' : 'No');
+      console.log('Access token length:', accessToken ? accessToken.length : 0);
       
       const requestBody = {
         symbol,
@@ -95,7 +97,7 @@ export const useMarketData = ({
     if (!symbol) return;
 
     // Only fetch if we have access token
-    if (!accessToken) {
+    if (!accessToken || accessToken.trim() === '') {
       setError('Please authenticate with Zerodha to view live market data');
       setLoading(false);
       return;

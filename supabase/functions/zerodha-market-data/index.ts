@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -29,8 +30,11 @@ serve(async (req) => {
     // Handle both accessToken and access_token for compatibility
     const token = accessToken || access_token;
     
-    if (!token) {
-      console.error('No access token provided in request');
+    console.log('Token received:', token ? 'Yes' : 'No');
+    console.log('Token length:', token ? token.length : 0);
+    
+    if (!token || token.trim() === '') {
+      console.error('No valid access token provided in request');
       throw new Error('Access token is required. Please authenticate with Zerodha first.');
     }
 
@@ -87,6 +91,8 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string) {
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
+  console.log(`Making API call to Zerodha for ${symbol} with token: ${accessToken.substring(0, 10)}...`);
+
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
       'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
@@ -94,8 +100,11 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string) {
     },
   });
 
+  console.log(`Zerodha API response status: ${response.status}`);
+
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorData = await response.json().catch(() => ({}));
+    console.error('Zerodha API error response:', errorData);
     throw new Error(`Quote API failed: ${errorData.message || response.statusText}`);
   }
 
