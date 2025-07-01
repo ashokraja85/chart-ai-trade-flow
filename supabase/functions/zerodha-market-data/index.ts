@@ -40,17 +40,13 @@ serve(async (req) => {
     let apiKey = Deno.env.get('ZERODHA_API_KEY') || Deno.env.get('u1qyy1g6dds0szr0');
     
     console.log('API Key available:', apiKey ? 'Yes' : 'No');
-    console.log('API Key value (first 8 chars):', apiKey ? apiKey.substring(0, 8) : 'None');
+    console.log('API Key length:', apiKey ? apiKey.length : 0);
     console.log('Token available:', token ? 'Yes' : 'No');
-    console.log('Token value (first 10 chars):', token ? token.substring(0, 10) : 'None');
+    console.log('Token length:', token ? token.length : 0);
     
-    // List all available environment variables for debugging
-    console.log('Available environment variables:');
-    for (const [key, value] of Object.entries(Deno.env.toObject())) {
-      if (key.includes('ZERODHA') || key.includes('API') || key.length === 16) {
-        console.log(`${key}: ${value ? value.substring(0, 8) + '...' : 'undefined'}`);
-      }
-    }
+    // Enhanced debugging for credentials
+    console.log('Using API Key:', apiKey ? apiKey.substring(0, 8) + '...' : 'None');
+    console.log('Using Access Token:', token ? token.substring(0, 10) + '...' : 'None');
     
     if (!apiKey || apiKey.trim() === '') {
       console.error('No valid API key found in environment secrets');
@@ -115,8 +111,9 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
-  console.log(`Making quote API call to Zerodha for ${symbol}`);
+  console.log(`Making API call to Zerodha for ${symbol}`);
   console.log(`API URL: https://api.kite.trade/quote?i=NSE:${symbol}`);
+  console.log(`Authorization header: token ${apiKey}:${accessToken.substring(0, 10)}...`);
 
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
@@ -125,11 +122,12 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
     },
   });
 
-  console.log(`Zerodha quote API response status: ${response.status}`);
+  console.log(`Zerodha API response status: ${response.status}`);
+  console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Zerodha quote API error response:', errorText);
+    console.error('Zerodha API error response:', errorText);
     
     let errorData;
     try {
@@ -139,6 +137,11 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
     }
     
     if (response.status === 403) {
+      // Test if it's an API key issue vs access token issue
+      console.error('Authentication failed - checking if credentials are valid format');
+      console.error('API Key format check:', /^[a-z0-9]{16}$/.test(apiKey) ? 'Valid format' : 'Invalid format');
+      console.error('Access Token format check:', /^[a-z0-9]{32}$/.test(accessToken) ? 'Valid format' : 'Invalid format');
+      
       throw new Error(`Authentication failed: ${errorData.message || 'Invalid API key or access token'}. Please check your Zerodha credentials.`);
     }
     
@@ -146,7 +149,7 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
   }
 
   const data = await response.json();
-  console.log('Raw quote API response:', JSON.stringify(data, null, 2));
+  console.log('Quote API successful - received data keys:', Object.keys(data));
   
   const quoteData = data.data[`NSE:${symbol}`];
 
@@ -186,6 +189,7 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
   const historyUrl = `https://api.kite.trade/instruments/historical/${instrumentToken}/${kiteTimeframe}?` +
     `from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`;
   console.log(`Historical data URL: ${historyUrl}`);
+  console.log(`Authorization header: token ${apiKey}:${accessToken.substring(0, 10)}...`);
 
   const response = await fetch(historyUrl, {
     headers: {
@@ -208,6 +212,10 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
     }
     
     if (response.status === 403) {
+      console.error('Historical data authentication failed');
+      console.error('API Key format check:', /^[a-z0-9]{16}$/.test(apiKey) ? 'Valid format' : 'Invalid format');
+      console.error('Access Token format check:', /^[a-z0-9]{32}$/.test(accessToken) ? 'Valid format' : 'Invalid format');
+      
       throw new Error(`Historical data authentication failed: ${errorData.message || 'Invalid API key or access token'}.`);
     }
     
