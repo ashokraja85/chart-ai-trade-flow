@@ -35,13 +35,6 @@ export const useMarketData = ({
       return;
     }
 
-    // Don't fetch if no access token
-    if (!accessToken || accessToken.trim() === '') {
-      setError('Please authenticate with Zerodha to view live market data');
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       setError(null);
@@ -53,7 +46,7 @@ export const useMarketData = ({
         symbol,
         dataType,
         timeframe: timeframe || 'live',
-        accessToken: accessToken // Send as accessToken to match edge function
+        accessToken: accessToken || undefined // Send as accessToken to match edge function
       };
 
       console.log('Request body:', requestBody);
@@ -83,7 +76,7 @@ export const useMarketData = ({
 
       setData(response);
       setLastUpdated(new Date());
-      console.log(`Successfully received live ${dataType} data for ${symbol}`, response.last_price || 'OK');
+      console.log(`Successfully received live ${dataType} data for ${symbol}`, response.last_price || response.spotPrice || 'OK');
     } catch (err) {
       console.error(`Error fetching ${dataType} data for ${symbol}:`, err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -96,13 +89,9 @@ export const useMarketData = ({
   useEffect(() => {
     if (!symbol) return;
 
-    // Only fetch if we have access token
-    if (!accessToken || accessToken.trim() === '') {
-      setError('Please authenticate with Zerodha to view live market data');
-      setLoading(false);
-      return;
-    }
-
+    // Always try to fetch data - the edge function will handle fallback to environment token
+    console.log(`Setting up data fetch for ${symbol} with refresh interval: ${refreshInterval}`);
+    
     // Initial fetch
     fetchData();
 
@@ -117,7 +106,7 @@ export const useMarketData = ({
         clearInterval(interval);
       }
     };
-  }, [fetchData, refreshInterval, accessToken]);
+  }, [fetchData, refreshInterval]);
 
   return { data, loading, error, lastUpdated };
 };
