@@ -9,14 +9,24 @@ import {
   TrendingUp,
   LogOut
 } from "lucide-react";
+import { useAuth } from "./AuthContext";
 
 export const Navigation = () => {
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   const navItems = [
     { path: "/", label: "Dashboard", icon: BarChart3 },
     { path: "/admin", label: "Admin", icon: Settings },
   ];
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
 
   return (
     <nav className="bg-slate-800 border-b border-slate-700">
@@ -50,8 +60,15 @@ export const Navigation = () => {
 
           {/* User Actions */}
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-400">Welcome, Trader</span>
-            <Button size="sm" variant="outline" className="text-slate-300 border-slate-600 hover:bg-slate-700">
+            <span className="text-sm text-slate-400">
+              Welcome, {user?.email?.split('@')[0] || 'Trader'}
+            </span>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="text-slate-300 border-slate-600 hover:bg-slate-700"
+              onClick={handleSignOut}
+            >
               <LogOut className="h-4 w-4 mr-2" />
               Logout
             </Button>
