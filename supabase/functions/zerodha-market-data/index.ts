@@ -36,16 +36,24 @@ serve(async (req) => {
       console.log('Using environment token:', token ? 'Yes' : 'No');
     }
     
-    // Get API key from environment
-    const apiKey = Deno.env.get('ZERODHA_API_KEY');
+    // Get API key from environment - try multiple possible names
+    let apiKey = Deno.env.get('ZERODHA_API_KEY') || Deno.env.get('u1qyy1g6dds0szr0');
     
     console.log('API Key available:', apiKey ? 'Yes' : 'No');
-    console.log('API Key length:', apiKey ? apiKey.length : 0);
+    console.log('API Key value (first 8 chars):', apiKey ? apiKey.substring(0, 8) : 'None');
     console.log('Token available:', token ? 'Yes' : 'No');
-    console.log('Token length:', token ? token.length : 0);
+    console.log('Token value (first 10 chars):', token ? token.substring(0, 10) : 'None');
+    
+    // List all available environment variables for debugging
+    console.log('Available environment variables:');
+    for (const [key, value] of Object.entries(Deno.env.toObject())) {
+      if (key.includes('ZERODHA') || key.includes('API') || key.length === 16) {
+        console.log(`${key}: ${value ? value.substring(0, 8) + '...' : 'undefined'}`);
+      }
+    }
     
     if (!apiKey || apiKey.trim() === '') {
-      console.error('ZERODHA_API_KEY not found in environment secrets');
+      console.error('No valid API key found in environment secrets');
       throw new Error('ZERODHA_API_KEY is required. Please set it in Supabase secrets.');
     }
     
@@ -55,8 +63,6 @@ serve(async (req) => {
     }
 
     console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha API`);
-    console.log(`Using API Key: ${apiKey.substring(0, 8)}...`);
-    console.log(`Using Access Token: ${token.substring(0, 10)}...`);
 
     let responseData;
     
@@ -109,9 +115,8 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
-  console.log(`Making API call to Zerodha for ${symbol}`);
+  console.log(`Making quote API call to Zerodha for ${symbol}`);
   console.log(`API URL: https://api.kite.trade/quote?i=NSE:${symbol}`);
-  console.log(`Authorization header: token ${apiKey}:${accessToken.substring(0, 10)}...`);
 
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
@@ -120,12 +125,11 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
     },
   });
 
-  console.log(`Zerodha API response status: ${response.status}`);
-  console.log(`Response headers:`, Object.fromEntries(response.headers.entries()));
+  console.log(`Zerodha quote API response status: ${response.status}`);
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Zerodha API error response:', errorText);
+    console.error('Zerodha quote API error response:', errorText);
     
     let errorData;
     try {
@@ -142,7 +146,7 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
   }
 
   const data = await response.json();
-  console.log('Raw API response:', JSON.stringify(data, null, 2));
+  console.log('Raw quote API response:', JSON.stringify(data, null, 2));
   
   const quoteData = data.data[`NSE:${symbol}`];
 
@@ -178,23 +182,40 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
   const fromDate = new Date();
   fromDate.setDate(fromDate.getDate() - 5); // Get last 5 days
 
-  const response = await fetch(
-    `https://api.kite.trade/instruments/historical/${instrumentToken}/${kiteTimeframe}?` +
-    `from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`,
-    {
-      headers: {
-        'Authorization': `token ${apiKey}:${accessToken}`,
-        'X-Kite-Version': '3',
-      },
-    }
-  );
+  console.log(`Making historical data API call to Zerodha for ${symbol}`);
+  const historyUrl = `https://api.kite.trade/instruments/historical/${instrumentToken}/${kiteTimeframe}?` +
+    `from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`;
+  console.log(`Historical data URL: ${historyUrl}`);
+
+  const response = await fetch(historyUrl, {
+    headers: {
+      'Authorization': `token ${apiKey}:${accessToken}`,
+      'X-Kite-Version': '3',
+    },
+  });
+
+  console.log(`Zerodha historical data API response status: ${response.status}`);
 
   if (!response.ok) {
-    const errorData = await response.json();
+    const errorText = await response.text();
+    console.error('Zerodha historical data API error response:', errorText);
+    
+    let errorData;
+    try {
+      errorData = JSON.parse(errorText);
+    } catch {
+      errorData = { message: errorText };
+    }
+    
+    if (response.status === 403) {
+      throw new Error(`Historical data authentication failed: ${errorData.message || 'Invalid API key or access token'}.`);
+    }
+    
     throw new Error(`Historical data API failed: ${errorData.message || response.statusText}`);
   }
 
   const data = await response.json();
+  console.log('Historical data response received, candles count:', data.data?.candles?.length || 0);
   
   const candles = data.data.candles.map((candle: any[]) => ({
     time: Math.floor(new Date(candle[0]).getTime() / 1000),
@@ -211,6 +232,8 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
 async function fetchLiveOptionChainData(symbol: string, accessToken: string, apiKey: string) {
   // For options, we need to construct the option symbols
   // This is a simplified version - you might need to enhance based on your needs
+  console.log(`Making option chain API call to Zerodha for ${symbol}`);
+  
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
       'Authorization': `token ${apiKey}:${accessToken}`,
@@ -218,9 +241,24 @@ async function fetchLiveOptionChainData(symbol: string, accessToken: string, api
     },
   });
 
+  console.log(`Zerodha option chain API response status: ${response.status}`);
+
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`Quote API failed: ${errorData.message || response.statusText}`);
+    const errorText = await response.text();
+    console.error('Zerodha option chain API error response:', errorText);
+    
+    let errorData;
+    try {
+      errorData = JSON.parse(errorText);
+    } catch {
+      errorData = { message: errorText };
+    }
+    
+    if (response.status === 403) {
+      throw new Error(`Option chain authentication failed: ${errorData.message || 'Invalid API key or access token'}.`);
+    }
+    
+    throw new Error(`Option chain API failed: ${errorData.message || response.statusText}`);
   }
 
   const data = await response.json();
