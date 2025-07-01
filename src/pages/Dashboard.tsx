@@ -5,6 +5,7 @@ import { PortfolioView } from "@/components/PortfolioView";
 import { StockSearch } from "@/components/StockSearch";
 import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
 import { EnhancedStockChart } from "@/components/EnhancedStockChart";
+import { ZerodhaAuthButton } from "@/components/ZerodhaAuthButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, BarChart3, Target } from "lucide-react";
