@@ -1,1 +1,5 @@
+
 project_id = "skurfdgwffrqvyercpxz"
+
+[functions.zerodha-market-data]
+verify_jwt = true

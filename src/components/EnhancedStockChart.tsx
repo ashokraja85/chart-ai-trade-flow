@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { BarChart3, TrendingUp, Volume2, Activity } from "lucide-react";
+import { BarChart3, TrendingUp, Volume2, Activity, RefreshCw } from "lucide-react";
+import { useMarketData } from '@/hooks/useMarketData';
 
 interface TechnicalIndicator {
   name: string;
@@ -29,15 +29,18 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
     { name: 'Bollinger Lower', value: 19580, signal: 'neutral', enabled: false },
   ]);
 
-  const [chartData, setChartData] = useState({
-    currentPrice: 19674.25,
-    change: +124.85,
-    changePercent: +0.64,
-    volume: 2100000,
-    vwap: 19680,
-    high: 19720,
-    low: 19550,
-    open: 19580
+  // Use real-time market data
+  const { data: quoteData, loading: quoteLoading, error: quoteError, lastUpdated } = useMarketData({
+    symbol,
+    dataType: 'quote',
+    refreshInterval: 2000 // Update every 2 seconds
+  });
+
+  const { data: ohlcvData, loading: ohlcvLoading } = useMarketData({
+    symbol,
+    dataType: 'ohlcv',
+    timeframe: timeframe.toLowerCase(),
+    refreshInterval: 10000 // Update every 10 seconds
   });
 
   const timeframes = [
@@ -56,14 +59,6 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
           : ind
       )
     );
-  };
-
-  const getSignalColor = (signal: string) => {
-    switch (signal) {
-      case 'bullish': return 'text-green-400';
-      case 'bearish': return 'text-red-400';
-      default: return 'text-yellow-400';
-    }
   };
 
   const getSignalBadge = (signal: string) => {
@@ -90,6 +85,7 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
           <CardTitle className="text-white flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             {symbol} Chart
+            {quoteLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
           </CardTitle>
           
           <div className="flex items-center gap-2">
@@ -111,58 +107,75 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
           </div>
         </div>
 
-        {/* Price Info */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-700 p-3 rounded-lg">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-400" />
-              <div>
-                <p className="text-xs text-slate-400">Current Price</p>
-                <p className="text-lg font-bold text-white">₹{chartData.currentPrice}</p>
-                <p className={`text-xs ${chartData.change > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {chartData.change > 0 ? '+' : ''}₹{chartData.change} ({chartData.changePercent > 0 ? '+' : ''}{chartData.changePercent}%)
+        {/* Real-time Price Info */}
+        {quoteData && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-slate-700 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-400" />
+                <div>
+                  <p className="text-xs text-slate-400">Live Price</p>
+                  <p className="text-lg font-bold text-white">₹{quoteData.last_price}</p>
+                  <p className={`text-xs ${quoteData.change > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {quoteData.change > 0 ? '+' : ''}₹{quoteData.change.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-700 p-3 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Volume2 className="h-4 w-4 text-blue-400" />
+                <div>
+                  <p className="text-xs text-slate-400">Volume</p>
+                  <p className="text-lg font-bold text-white">{formatNumber(quoteData.volume)}</p>
+                  <p className="text-xs text-slate-400">Live Data</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-700 p-3 rounded-lg">
+              <p className="text-xs text-slate-400">Day Range</p>
+              <p className="text-sm font-medium text-white">
+                ₹{quoteData.ohlc.low} - ₹{quoteData.ohlc.high}
+              </p>
+              <p className="text-xs text-slate-400">Open: ₹{quoteData.ohlc.open}</p>
+            </div>
+
+            <div className="bg-slate-700 p-3 rounded-lg">
+              <p className="text-xs text-slate-400">Status</p>
+              <Badge className="bg-green-600 text-white">Live</Badge>
+              {lastUpdated && (
+                <p className="text-xs text-slate-400 mt-1">
+                  {lastUpdated.toLocaleTimeString()}
                 </p>
-              </div>
+              )}
             </div>
           </div>
+        )}
 
-          <div className="bg-slate-700 p-3 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-4 w-4 text-blue-400" />
-              <div>
-                <p className="text-xs text-slate-400">Volume</p>
-                <p className="text-lg font-bold text-white">{formatNumber(chartData.volume)}</p>
-                <p className="text-xs text-slate-400">VWAP: ₹{chartData.vwap}</p>
-              </div>
-            </div>
+        {quoteError && (
+          <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg">
+            <p className="text-red-400 text-sm">Error loading market data: {quoteError}</p>
           </div>
-
-          <div className="bg-slate-700 p-3 rounded-lg">
-            <p className="text-xs text-slate-400">Day Range</p>
-            <p className="text-sm font-medium text-white">
-              ₹{chartData.low} - ₹{chartData.high}
-            </p>
-            <p className="text-xs text-slate-400">Open: ₹{chartData.open}</p>
-          </div>
-
-          <div className="bg-slate-700 p-3 rounded-lg">
-            <p className="text-xs text-slate-400">Market Status</p>
-            <Badge className="bg-green-600 text-white">Open</Badge>
-            <p className="text-xs text-slate-400 mt-1">NSE: 9:15 - 15:30</p>
-          </div>
-        </div>
+        )}
       </CardHeader>
 
       <CardContent>
-        {/* Chart Placeholder */}
+        {/* Chart Placeholder - Enhanced with real-time data */}
         <div className="bg-slate-900 rounded-lg p-8 text-center border border-slate-700 min-h-[400px] flex items-center justify-center mb-6">
           <div className="text-slate-400">
             <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg mb-2">Advanced Chart Integration</p>
-            <p className="text-sm">Real-time {symbol} price chart with {timeframe} timeframe</p>
-            <p className="text-xs mt-2 text-slate-500">
-              TradingView Lightweight Charts or similar charting library would be integrated here
-            </p>
+            <p className="text-lg mb-2">Real-time Chart Integration</p>
+            <p className="text-sm">Live {symbol} data from Zerodha Kite API</p>
+            {ohlcvData && (
+              <p className="text-xs mt-2 text-green-400">
+                {ohlcvData.candles?.length} candles loaded • {timeframe} timeframe
+              </p>
+            )}
+            {ohlcvLoading && (
+              <p className="text-xs mt-2 text-blue-400">Loading chart data...</p>
+            )}
           </div>
         </div>
 

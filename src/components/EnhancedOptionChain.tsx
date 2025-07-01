@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMarketData } from '@/hooks/useMarketData';
 
 interface OptionData {
   strike: number;
@@ -25,58 +25,28 @@ interface EnhancedOptionChainProps {
 }
 
 export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
-  const [optionData, setOptionData] = useState<OptionData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState('current');
-  const [spotPrice, setSpotPrice] = useState(19674.25); // Mock spot price
   const [totalCallOI, setTotalCallOI] = useState(0);
   const [totalPutOI, setTotalPutOI] = useState(0);
 
-  // Mock option chain data - In production, this would come from your API
-  const mockOptionData: OptionData[] = [
-    { strike: 19500, callOI: 45780, callLTP: 189.5, callChange: +15.2, callVolume: 1250, putOI: 67890, putLTP: 15.3, putChange: -2.1, putVolume: 890 },
-    { strike: 19550, callOI: 78965, callLTP: 145.8, callChange: +12.1, callVolume: 1850, putOI: 89456, putLTP: 22.7, putChange: -1.8, putVolume: 1120 },
-    { strike: 19600, callOI: 123456, callLTP: 102.8, callChange: +8.5, callVolume: 2340, putOI: 98765, putLTP: 28.7, putChange: -1.8, putVolume: 1450 },
-    { strike: 19650, callOI: 156789, callLTP: 65.4, callChange: +5.9, callVolume: 2890, putOI: 134567, putLTP: 38.9, putChange: +1.3, putVolume: 1780 },
-    { strike: 19700, callOI: 234567, callLTP: 35.4, callChange: +2.9, callVolume: 3450, putOI: 187654, putLTP: 58.9, putChange: +3.3, putVolume: 2100, isATM: true },
-    { strike: 19750, callOI: 187654, callLTP: 18.1, callChange: +0.8, callVolume: 2890, putOI: 156789, putLTP: 88.2, putChange: +5.1, putVolume: 2340 },
-    { strike: 19800, callOI: 134567, callLTP: 8.7, callChange: -0.5, callVolume: 2100, putOI: 123456, putLTP: 125.6, putChange: +8.8, putVolume: 1890 },
-    { strike: 19850, callOI: 98765, callLTP: 4.2, callChange: -1.2, callVolume: 1450, putOI: 98765, putLTP: 168.3, putChange: +12.5, putVolume: 1560 },
-    { strike: 19900, callOI: 67890, callLTP: 2.1, callChange: -1.8, callVolume: 890, putOI: 78965, putLTP: 215.7, putChange: +15.8, putVolume: 1120 },
-  ];
+  // Use real-time option chain data
+  const { data: optionChainData, loading, error, lastUpdated } = useMarketData({
+    symbol,
+    dataType: 'option_chain',
+    refreshInterval: 3000 // Update every 3 seconds
+  });
+
+  const optionData: OptionData[] = optionChainData?.strikes || [];
+  const spotPrice = optionChainData?.spotPrice || 0;
 
   useEffect(() => {
-    loadOptionChain();
-    const interval = setInterval(loadOptionChain, 5000); // Refresh every 5 seconds
-    return () => clearInterval(interval);
-  }, [symbol, selectedExpiry]);
-
-  const loadOptionChain = async () => {
-    setLoading(true);
-    try {
-      // In production, fetch from your API
-      // const { data, error } = await supabase.functions.invoke('get-option-chain', {
-      //   body: { symbol, expiry: selectedExpiry }
-      // });
-      
-      // For now, use mock data
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-      setOptionData(mockOptionData);
-      
-      // Calculate totals
-      const callOITotal = mockOptionData.reduce((sum, item) => sum + item.callOI, 0);
-      const putOITotal = mockOptionData.reduce((sum, item) => sum + item.putOI, 0);
+    if (optionData.length > 0) {
+      const callOITotal = optionData.reduce((sum, item) => sum + item.callOI, 0);
+      const putOITotal = optionData.reduce((sum, item) => sum + item.putOI, 0);
       setTotalCallOI(callOITotal);
       setTotalPutOI(putOITotal);
-      
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Error loading option chain:', error);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [optionData]);
 
   const formatNumber = (num: number) => {
     if (num >= 100000) {
@@ -86,7 +56,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
   };
 
   const getATMStrike = () => {
-    return optionData.find(item => item.isATM)?.strike || 19700;
+    return optionData.find(item => item.isATM)?.strike || spotPrice;
   };
 
   return (
@@ -108,15 +78,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                 <SelectItem value="monthly">Monthly</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={loadOptionChain}
-              disabled={loading}
-              className="bg-slate-700 border-slate-600"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Badge className="bg-green-600 text-white">Live</Badge>
           </div>
         </div>
         
@@ -143,6 +105,12 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
           <p className="text-xs text-slate-400">
             Last updated: {lastUpdated.toLocaleTimeString()}
           </p>
+        )}
+
+        {error && (
+          <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg">
+            <p className="text-red-400 text-sm">Error loading option chain: {error}</p>
+          </div>
         )}
       </CardHeader>
       
@@ -171,7 +139,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                   <td className="p-2 text-slate-300">{formatNumber(row.callOI)}</td>
                   <td className="p-2 text-right">
                     <div className="flex flex-col items-end">
-                      <span className="text-white font-medium">₹{row.callLTP}</span>
+                      <span className="text-white font-medium">₹{row.callLTP.toFixed(2)}</span>
                       <div className="flex items-center gap-1">
                         {row.callChange > 0 ? (
                           <TrendingUp className="h-3 w-3 text-green-400" />
@@ -179,7 +147,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                           <TrendingDown className="h-3 w-3 text-red-400" />
                         )}
                         <span className={`text-xs ${row.callChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {row.callChange > 0 ? '+' : ''}{row.callChange}
+                          {row.callChange > 0 ? '+' : ''}{row.callChange.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -198,7 +166,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                   <td className="p-2 text-slate-400">{formatNumber(row.putVolume)}</td>
                   <td className="p-2">
                     <div className="flex flex-col">
-                      <span className="text-white font-medium">₹{row.putLTP}</span>
+                      <span className="text-white font-medium">₹{row.putLTP.toFixed(2)}</span>
                       <div className="flex items-center gap-1">
                         {row.putChange > 0 ? (
                           <TrendingUp className="h-3 w-3 text-green-400" />
@@ -206,7 +174,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                           <TrendingDown className="h-3 w-3 text-red-400" />
                         )}
                         <span className={`text-xs ${row.putChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {row.putChange > 0 ? '+' : ''}{row.putChange}
+                          {row.putChange > 0 ? '+' : ''}{row.putChange.toFixed(2)}
                         </span>
                       </div>
                     </div>
