@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { useMarketData } from '@/hooks/useMarketData';
+import { useZerodhaAuth } from '@/hooks/useZerodhaAuth';
 
 interface OptionData {
   strike: number;
@@ -29,11 +29,14 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
   const [totalCallOI, setTotalCallOI] = useState(0);
   const [totalPutOI, setTotalPutOI] = useState(0);
 
-  // Use real-time option chain data
+  const { accessToken } = useZerodhaAuth();
+
+  // Use real-time option chain data from Zerodha
   const { data: optionChainData, loading, error, lastUpdated } = useMarketData({
     symbol,
     dataType: 'option_chain',
-    refreshInterval: 3000 // Update every 3 seconds
+    refreshInterval: 5000,
+    accessToken
   });
 
   const optionData: OptionData[] = optionChainData?.strikes || [];
@@ -66,6 +69,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
           <CardTitle className="text-white flex items-center gap-2">
             {symbol} Option Chain
             {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+            {accessToken && <Badge className="bg-green-600 text-white text-xs ml-2">LIVE</Badge>}
           </CardTitle>
           <div className="flex items-center gap-4">
             <Select value={selectedExpiry} onValueChange={setSelectedExpiry}>
@@ -78,7 +82,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
                 <SelectItem value="monthly">Monthly</SelectItem>
               </SelectContent>
             </Select>
-            <Badge className="bg-green-600 text-white">Live</Badge>
+            {accessToken && <Badge className="bg-green-600 text-white">Live</Badge>}
           </div>
         </div>
         
@@ -86,6 +90,7 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
           <div className="text-center p-2 bg-slate-700 rounded">
             <p className="text-slate-400">Spot Price</p>
             <p className="text-lg font-bold text-white">₹{spotPrice.toLocaleString()}</p>
+            {accessToken && <p className="text-xs text-green-400">Zerodha Live</p>}
           </div>
           <div className="text-center p-2 bg-slate-700 rounded">
             <p className="text-slate-400">ATM Strike</p>
@@ -109,7 +114,12 @@ export const EnhancedOptionChain = ({ symbol }: EnhancedOptionChainProps) => {
 
         {error && (
           <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg">
-            <p className="text-red-400 text-sm">Error loading option chain: {error}</p>
+            <p className="text-red-400 text-sm">
+              {error.includes('authenticate') 
+                ? 'Please connect to Zerodha to view live option chain data'
+                : `Error loading option chain: ${error}`
+              }
+            </p>
           </div>
         )}
       </CardHeader>

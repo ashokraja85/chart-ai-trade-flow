@@ -6,149 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Base market data - will be modified with realistic fluctuations
-const baseMarketData = {
-  'NIFTY': {
-    basePrice: 24500,
-    open: 24450,
-    high: 24580,
-    low: 24420,
-    volume: 850000,
-    trend: 0.002
-  },
-  'BANKNIFTY': {
-    basePrice: 51200,
-    open: 51150,
-    high: 51350,
-    low: 51100,
-    volume: 650000,
-    trend: -0.001
-  },
-  'RELIANCE': {
-    basePrice: 2850,
-    open: 2835,
-    high: 2865,
-    low: 2825,
-    volume: 120000,
-    trend: 0.003
-  },
-  'TCS': {
-    basePrice: 4250,
-    open: 4230,
-    high: 4270,
-    low: 4220,
-    volume: 95000,
-    trend: 0.001
-  }
+// Instrument token mappings (you may need to expand this)
+const instrumentTokens: Record<string, string> = {
+  'NIFTY': '256265',
+  'BANKNIFTY': '260105',
+  'RELIANCE': '738561',
+  'TCS': '2953217',
 };
 
-function generateRealisticPrice(symbol: string, baseData: any) {
-  const now = new Date();
-  const timestamp = now.getTime();
-  
-  const timeBasedVariation = Math.sin(timestamp / 60000) * 0.005;
-  const secondVariation = Math.sin(timestamp / 1000) * 0.002;
-  const randomComponent = (Math.random() - 0.5) * 0.008;
-  
-  const totalVariation = timeBasedVariation + secondVariation + randomComponent + baseData.trend;
-  const currentPrice = baseData.basePrice * (1 + totalVariation);
-  
-  const adjustedHigh = Math.max(baseData.high, currentPrice);
-  const adjustedLow = Math.min(baseData.low, currentPrice);
-  
-  const volumeVariation = 0.7 + (Math.random() * 0.6);
-  const currentVolume = Math.floor(baseData.volume * volumeVariation);
-  
-  return {
-    last_price: Number(currentPrice.toFixed(2)),
-    change: Number((currentPrice - baseData.open).toFixed(2)),
-    change_percent: Number(((currentPrice - baseData.open) / baseData.open * 100).toFixed(2)),
-    volume: currentVolume,
-    ohlc: {
-      open: baseData.open,
-      high: Number(adjustedHigh.toFixed(2)),
-      low: Number(adjustedLow.toFixed(2)),
-      close: Number(currentPrice.toFixed(2))
-    },
-    timestamp: now.toISOString()
-  };
-}
-
-function fetchQuoteData(symbol: string) {
-  const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
-  const priceData = generateRealisticPrice(symbol, baseData);
-  
-  return {
-    instrument_token: 256265,
-    ...priceData
-  };
-}
-
-function fetchOHLCVData(symbol: string, timeframe: string) {
-  const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
-  const candles = [];
-  const basePrice = baseData.basePrice;
-  
-  for (let i = 0; i < 100; i++) {
-    const timestamp = new Date();
-    timestamp.setMinutes(timestamp.getMinutes() - (100 - i) * 5);
-    
-    const trend = Math.sin(i * 0.05) * baseData.trend * 50;
-    const noise = (Math.random() - 0.5) * 0.015;
-    const priceMultiplier = 1 + trend + noise;
-    
-    const open = basePrice * priceMultiplier;
-    const closeVariation = (Math.random() - 0.5) * 0.008;
-    const close = open * (1 + closeVariation);
-    const high = Math.max(open, close) * (1 + Math.random() * 0.005);
-    const low = Math.min(open, close) * (1 - Math.random() * 0.005);
-    const volume = Math.floor(baseData.volume * (0.3 + Math.random() * 1.4));
-    
-    candles.push({
-      time: Math.floor(timestamp.getTime() / 1000),
-      open: Number(open.toFixed(2)),
-      high: Number(high.toFixed(2)),
-      low: Number(low.toFixed(2)),
-      close: Number(close.toFixed(2)),
-      volume
-    });
-  }
-  
-  return { candles, symbol, timeframe };
-}
-
-function fetchOptionChainData(symbol: string) {
-  const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
-  const strikes = [];
-  const currentPrice = generateRealisticPrice(symbol, baseData).last_price;
-  const baseStrike = Math.round(currentPrice / 50) * 50;
-  
-  for (let i = -10; i <= 10; i++) {
-    const strike = baseStrike + (i * 50);
-    const distanceFromATM = Math.abs(strike - currentPrice);
-    
-    const callPremium = Math.max(1, Math.max(0, currentPrice - strike) + (50 - distanceFromATM * 0.1));
-    const putPremium = Math.max(1, Math.max(0, strike - currentPrice) + (50 - distanceFromATM * 0.1));
-    
-    strikes.push({
-      strike,
-      callOI: Math.floor(50000 + Math.random() * 150000),
-      callLTP: Number(callPremium.toFixed(2)),
-      callChange: Number(((Math.random() - 0.5) * 10).toFixed(2)),
-      callVolume: Math.floor(Math.random() * 5000),
-      putOI: Math.floor(50000 + Math.random() * 150000),
-      putLTP: Number(putPremium.toFixed(2)),
-      putChange: Number(((Math.random() - 0.5) * 10).toFixed(2)),
-      putVolume: Math.floor(Math.random() * 5000),
-      isATM: Math.abs(strike - currentPrice) < 25
-    });
-  }
-  
-  return { strikes, symbol, spotPrice: Number(currentPrice.toFixed(2)) };
-}
-
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -156,41 +22,32 @@ serve(async (req) => {
   try {
     console.log('Fresh request at:', new Date().toISOString());
     
-    let requestBody;
-    const contentType = req.headers.get('content-type') || '';
+    const requestBody = await req.json();
+    const { symbol = 'NIFTY', dataType = 'quote', timeframe = 'live', access_token } = requestBody;
     
-    if (contentType.includes('application/json')) {
-      requestBody = await req.json();
-    } else {
-      const textBody = await req.text();
-      if (textBody) {
-        requestBody = JSON.parse(textBody);
-      } else {
-        requestBody = {};
-      }
+    if (!access_token) {
+      throw new Error('Access token is required. Please authenticate with Zerodha first.');
     }
 
-    const { symbol = 'NIFTY', dataType = 'quote', timeframe = 'live' } = requestBody;
-    
-    console.log(`Generating fresh ${dataType} for ${symbol}`);
+    console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha API`);
 
     let responseData;
     
     switch (dataType) {
       case 'quote':
-        responseData = fetchQuoteData(symbol);
+        responseData = await fetchLiveQuoteData(symbol, access_token);
         break;
       case 'ohlcv':
-        responseData = fetchOHLCVData(symbol, timeframe);
+        responseData = await fetchLiveOHLCVData(symbol, timeframe, access_token);
         break;
       case 'option_chain':
-        responseData = fetchOptionChainData(symbol);
+        responseData = await fetchLiveOptionChainData(symbol, access_token);
         break;
       default:
-        responseData = fetchQuoteData(symbol);
+        responseData = await fetchLiveQuoteData(symbol, access_token);
     }
 
-    console.log(`Fresh data generated for ${symbol}:`, responseData.last_price || 'OK');
+    console.log(`Live data fetched for ${symbol}:`, responseData?.last_price || 'OK');
 
     return new Response(
       JSON.stringify(responseData),
@@ -205,7 +62,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Edge function error:', error);
+    console.error('Zerodha API error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -218,3 +75,140 @@ serve(async (req) => {
     );
   }
 });
+
+async function fetchLiveQuoteData(symbol: string, accessToken: string) {
+  const instrumentToken = instrumentTokens[symbol.toUpperCase()];
+  if (!instrumentToken) {
+    throw new Error(`Instrument token not found for symbol: ${symbol}`);
+  }
+
+  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
+    headers: {
+      'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+      'X-Kite-Version': '3',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Quote API failed: ${errorData.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const quoteData = data.data[`NSE:${symbol}`];
+
+  if (!quoteData) {
+    throw new Error(`No quote data found for ${symbol}`);
+  }
+
+  return {
+    instrument_token: parseInt(instrumentToken),
+    last_price: quoteData.last_price,
+    change: quoteData.net_change,
+    change_percent: quoteData.change,
+    volume: quoteData.volume,
+    ohlc: {
+      open: quoteData.ohlc.open,
+      high: quoteData.ohlc.high,
+      low: quoteData.ohlc.low,
+      close: quoteData.ohlc.close || quoteData.last_price
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken: string) {
+  const instrumentToken = instrumentTokens[symbol.toUpperCase()];
+  if (!instrumentToken) {
+    throw new Error(`Instrument token not found for symbol: ${symbol}`);
+  }
+
+  // Convert timeframe to Zerodha format
+  const kiteTimeframe = convertTimeframe(timeframe);
+  const toDate = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - 5); // Get last 5 days
+
+  const response = await fetch(
+    `https://api.kite.trade/instruments/historical/${instrumentToken}/${kiteTimeframe}?` +
+    `from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`,
+    {
+      headers: {
+        'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+        'X-Kite-Version': '3',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Historical data API failed: ${errorData.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  const candles = data.data.candles.map((candle: any[]) => ({
+    time: Math.floor(new Date(candle[0]).getTime() / 1000),
+    open: candle[1],
+    high: candle[2],
+    low: candle[3],
+    close: candle[4],
+    volume: candle[5]
+  }));
+
+  return { candles, symbol, timeframe };
+}
+
+async function fetchLiveOptionChainData(symbol: string, accessToken: string) {
+  // For options, we need to construct the option symbols
+  // This is a simplified version - you might need to enhance based on your needs
+  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
+    headers: {
+      'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+      'X-Kite-Version': '3',
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Quote API failed: ${errorData.message || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const quoteData = data.data[`NSE:${symbol}`];
+  const spotPrice = quoteData.last_price;
+
+  // Generate option chain structure (you'll need to enhance this with actual option data)
+  const baseStrike = Math.round(spotPrice / 50) * 50;
+  const strikes = [];
+
+  for (let i = -10; i <= 10; i++) {
+    const strike = baseStrike + (i * 50);
+    strikes.push({
+      strike,
+      callOI: 0, // You'll need to fetch actual option data
+      callLTP: Math.max(1, Math.max(0, spotPrice - strike)),
+      callChange: 0,
+      callVolume: 0,
+      putOI: 0,
+      putLTP: Math.max(1, Math.max(0, strike - spotPrice)),
+      putChange: 0,
+      putVolume: 0,
+      isATM: Math.abs(strike - spotPrice) < 25
+    });
+  }
+
+  return { strikes, symbol, spotPrice };
+}
+
+function convertTimeframe(timeframe: string): string {
+  const timeframeMap: Record<string, string> = {
+    '5M': '5minute',
+    '15M': '15minute',
+    '1H': 'hour',
+    '1D': 'day',
+    '1W': 'week',
+    'live': '5minute'
+  };
+  return timeframeMap[timeframe] || '5minute';
+}

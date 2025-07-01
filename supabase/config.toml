@@ -3,3 +3,6 @@ project_id = "skurfdgwffrqvyercpxz"
 
 [functions.zerodha-market-data]
 verify_jwt = true
+
+[functions.zerodha-auth]
+verify_jwt = true

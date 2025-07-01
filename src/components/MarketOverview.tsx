@@ -3,15 +3,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { useMarketData } from "@/hooks/useMarketData";
+import { useZerodhaAuth } from "@/hooks/useZerodhaAuth";
 
 export const MarketOverview = () => {
   const symbols = ['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS'];
+  const { accessToken } = useZerodhaAuth();
   
   const MarketCard = ({ symbol }: { symbol: string }) => {
     const { data, loading, error } = useMarketData({
       symbol,
       dataType: 'quote',
-      refreshInterval: 3000
+      refreshInterval: 3000,
+      accessToken
     });
 
     const getDisplayName = (sym: string) => {
@@ -42,7 +45,9 @@ export const MarketOverview = () => {
           <CardContent className="p-4">
             <div className="text-center">
               <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
-              <p className="text-xs text-red-400 mt-2">Error loading data</p>
+              <p className="text-xs text-red-400 mt-2">
+                {error.includes('authenticate') ? 'Connect Zerodha' : 'Error loading data'}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -59,6 +64,9 @@ export const MarketOverview = () => {
             <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
             <div className="flex items-center gap-1">
               {loading && <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />}
+              {accessToken && (
+                <Badge className="bg-green-600 text-white text-xs">LIVE</Badge>
+              )}
               {isPositive ? (
                 <TrendingUp className="h-4 w-4 text-green-500" />
               ) : (

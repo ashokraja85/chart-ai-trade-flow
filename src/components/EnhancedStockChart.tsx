@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { BarChart3, TrendingUp, Volume2, Activity, RefreshCw } from "lucide-react";
 import { useMarketData } from '@/hooks/useMarketData';
+import { useZerodhaAuth } from '@/hooks/useZerodhaAuth';
 
 interface TechnicalIndicator {
   name: string;
@@ -29,18 +29,22 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
     { name: 'Bollinger Lower', value: 19580, signal: 'neutral', enabled: false },
   ]);
 
-  // Use real-time market data
+  const { accessToken } = useZerodhaAuth();
+
+  // Use real-time market data from Zerodha
   const { data: quoteData, loading: quoteLoading, error: quoteError, lastUpdated } = useMarketData({
     symbol,
     dataType: 'quote',
-    refreshInterval: 2000 // Update every 2 seconds
+    refreshInterval: 2000,
+    accessToken
   });
 
   const { data: ohlcvData, loading: ohlcvLoading } = useMarketData({
     symbol,
     dataType: 'ohlcv',
     timeframe: timeframe.toLowerCase(),
-    refreshInterval: 10000 // Update every 10 seconds
+    refreshInterval: 10000,
+    accessToken
   });
 
   const timeframes = [
@@ -86,6 +90,7 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
             <BarChart3 className="h-5 w-5" />
             {symbol} Chart
             {quoteLoading && <RefreshCw className="h-4 w-4 animate-spin" />}
+            {accessToken && <Badge className="bg-green-600 text-white text-xs ml-2">LIVE</Badge>}
           </CardTitle>
           
           <div className="flex items-center gap-2">
@@ -107,7 +112,7 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
           </div>
         </div>
 
-        {/* Real-time Price Info */}
+        {/* Real-time Price Info from Zerodha */}
         {quoteData && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-slate-700 p-3 rounded-lg">
@@ -129,7 +134,7 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
                 <div>
                   <p className="text-xs text-slate-400">Volume</p>
                   <p className="text-lg font-bold text-white">{formatNumber(quoteData.volume)}</p>
-                  <p className="text-xs text-slate-400">Live Data</p>
+                  <p className="text-xs text-green-400">Zerodha Live</p>
                 </div>
               </div>
             </div>
@@ -156,18 +161,23 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
 
         {quoteError && (
           <div className="bg-red-900/20 border border-red-700 p-3 rounded-lg">
-            <p className="text-red-400 text-sm">Error loading market data: {quoteError}</p>
+            <p className="text-red-400 text-sm">
+              {quoteError.includes('authenticate') 
+                ? 'Please connect to Zerodha to view live market data' 
+                : `Error loading market data: ${quoteError}`
+              }
+            </p>
           </div>
         )}
       </CardHeader>
 
       <CardContent>
-        {/* Chart Placeholder - Enhanced with real-time data */}
+        {/* Chart Placeholder - Enhanced with Zerodha real-time data */}
         <div className="bg-slate-900 rounded-lg p-8 text-center border border-slate-700 min-h-[400px] flex items-center justify-center mb-6">
           <div className="text-slate-400">
             <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            <p className="text-lg mb-2">Real-time Chart Integration</p>
-            <p className="text-sm">Live {symbol} data from Zerodha Kite API</p>
+            <p className="text-lg mb-2">Live Chart Integration</p>
+            <p className="text-sm">Real-time {symbol} data from Zerodha Kite API</p>
             {ohlcvData && (
               <p className="text-xs mt-2 text-green-400">
                 {ohlcvData.candles?.length} candles loaded • {timeframe} timeframe
@@ -175,6 +185,9 @@ export const EnhancedStockChart = ({ symbol }: EnhancedStockChartProps) => {
             )}
             {ohlcvLoading && (
               <p className="text-xs mt-2 text-blue-400">Loading chart data...</p>
+            )}
+            {!accessToken && (
+              <p className="text-xs mt-2 text-orange-400">Connect to Zerodha for live data</p>
             )}
           </div>
         </div>

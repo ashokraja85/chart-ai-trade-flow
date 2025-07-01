@@ -18,7 +18,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Trading Dashboard</h1>
-          <p className="text-slate-400">Real-time market data and analysis</p>
+          <p className="text-slate-400">Live market data powered by Zerodha</p>
         </div>
       </div>
 
@@ -33,8 +33,11 @@ const Dashboard = () => {
 
       {/* Main Trading Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Search and Portfolio */}
+        {/* Left Column - Zerodha Auth and Portfolio */}
         <div className="space-y-6">
+          {/* Zerodha Authentication */}
+          <ZerodhaAuthButton />
+
           {/* Stock Search */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>

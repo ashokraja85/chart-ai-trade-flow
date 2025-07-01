@@ -7,6 +7,7 @@ interface MarketDataOptions {
   dataType: 'quote' | 'ohlcv' | 'option_chain';
   timeframe?: string;
   refreshInterval?: number;
+  accessToken?: string | null;
 }
 
 interface MarketDataResponse {
@@ -20,7 +21,8 @@ export const useMarketData = ({
   symbol,
   dataType,
   timeframe,
-  refreshInterval = 2000
+  refreshInterval = 3000,
+  accessToken
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -35,12 +37,13 @@ export const useMarketData = ({
 
     try {
       setError(null);
-      console.log(`Fetching fresh ${dataType} data for ${symbol}...`);
+      console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha...`);
       
       const requestBody = {
         symbol,
         dataType,
-        timeframe: timeframe || 'live'
+        timeframe: timeframe || 'live',
+        access_token: accessToken
       };
 
       console.log('Request body:', requestBody);
@@ -61,7 +64,7 @@ export const useMarketData = ({
       }
 
       if (!response) {
-        throw new Error('No data received from API');
+        throw new Error('No data received from Zerodha API');
       }
 
       if (response.error) {
@@ -70,7 +73,7 @@ export const useMarketData = ({
 
       setData(response);
       setLastUpdated(new Date());
-      console.log(`Successfully received fresh ${dataType} data for ${symbol}`, response.last_price || 'OK');
+      console.log(`Successfully received live ${dataType} data for ${symbol}`, response.last_price || 'OK');
     } catch (err) {
       console.error(`Error fetching ${dataType} data for ${symbol}:`, err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -78,10 +81,17 @@ export const useMarketData = ({
     } finally {
       setLoading(false);
     }
-  }, [symbol, dataType, timeframe]);
+  }, [symbol, dataType, timeframe, accessToken]);
 
   useEffect(() => {
     if (!symbol) return;
+
+    // Only fetch if we have access token for live data
+    if (!accessToken) {
+      setError('Please authenticate with Zerodha to view live market data');
+      setLoading(false);
+      return;
+    }
 
     // Initial fetch
     fetchData();
