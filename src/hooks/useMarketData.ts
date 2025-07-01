@@ -20,7 +20,7 @@ export const useMarketData = ({
   symbol,
   dataType,
   timeframe,
-  refreshInterval = 3000 // Reduced to 3 seconds for more frequent updates
+  refreshInterval = 2000 // Reduced to 2 seconds for truly live feel
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,7 @@ export const useMarketData = ({
 
     try {
       setError(null);
-      console.log(`Fetching ${dataType} data for ${symbol}...`);
+      console.log(`Fetching fresh ${dataType} data for ${symbol}...`);
       
       const requestBody = {
         symbol,
@@ -71,35 +71,15 @@ export const useMarketData = ({
 
       setData(response);
       setLastUpdated(new Date());
-      console.log(`Successfully fetched ${dataType} data for ${symbol}`, response);
+      console.log(`Successfully fetched fresh ${dataType} data for ${symbol}`, response);
     } catch (err) {
       console.error(`Error fetching ${dataType} data for ${symbol}:`, err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
       setError(errorMessage);
-      
-      // Set fallback data only if no data exists
-      if (!data && dataType === 'quote') {
-        console.log('Setting fallback quote data');
-        const fallbackData = {
-          instrument_token: 256265,
-          last_price: symbol === 'NIFTY' ? 19674.25 : symbol === 'BANKNIFTY' ? 43892.15 : 2450.75,
-          volume: Math.floor(Math.random() * 1000000),
-          ohlc: {
-            open: symbol === 'NIFTY' ? 19580 : symbol === 'BANKNIFTY' ? 43800 : 2420,
-            high: symbol === 'NIFTY' ? 19720 : symbol === 'BANKNIFTY' ? 44050 : 2480,
-            low: symbol === 'NIFTY' ? 19550 : symbol === 'BANKNIFTY' ? 43750 : 2400,
-            close: symbol === 'NIFTY' ? 19674.25 : symbol === 'BANKNIFTY' ? 43892.15 : 2450.75
-          },
-          change: symbol === 'NIFTY' ? 124.85 : symbol === 'BANKNIFTY' ? -89.45 : 15.75,
-          timestamp: new Date().toISOString()
-        };
-        setData(fallbackData);
-        setLastUpdated(new Date());
-      }
     } finally {
       setLoading(false);
     }
-  }, [symbol, dataType, timeframe, data]);
+  }, [symbol, dataType, timeframe]);
 
   useEffect(() => {
     if (!symbol) return;
