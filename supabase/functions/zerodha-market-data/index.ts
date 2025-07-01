@@ -28,14 +28,20 @@ serve(async (req) => {
     const { symbol = 'NIFTY', dataType = 'quote', timeframe = 'live', accessToken, access_token } = requestBody;
     
     // Handle both accessToken and access_token for compatibility
-    const token = accessToken || access_token;
+    let token = accessToken || access_token;
     
-    console.log('Token received:', token ? 'Yes' : 'No');
+    // If no token from request, try to get from environment (for shared tokens)
+    if (!token || token.trim() === '') {
+      token = Deno.env.get("ZERODHA_ACCESS_TOKEN");
+      console.log('Using environment token:', token ? 'Yes' : 'No');
+    }
+    
+    console.log('Final token received:', token ? 'Yes' : 'No');
     console.log('Token length:', token ? token.length : 0);
     
     if (!token || token.trim() === '') {
-      console.error('No valid access token provided in request');
-      throw new Error('Access token is required. Please authenticate with Zerodha first.');
+      console.error('No valid access token provided in request or environment');
+      throw new Error('Access token is required. Please authenticate with Zerodha first or set ZERODHA_ACCESS_TOKEN in secrets.');
     }
 
     console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha API`);
@@ -91,11 +97,16 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string) {
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
+  const apiKey = Deno.env.get('ZERODHA_API_KEY');
+  if (!apiKey) {
+    throw new Error('ZERODHA_API_KEY not found in environment secrets');
+  }
+
   console.log(`Making API call to Zerodha for ${symbol} with token: ${accessToken.substring(0, 10)}...`);
 
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
-      'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+      'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
     },
   });
@@ -137,6 +148,11 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
+  const apiKey = Deno.env.get('ZERODHA_API_KEY');
+  if (!apiKey) {
+    throw new Error('ZERODHA_API_KEY not found in environment secrets');
+  }
+
   // Convert timeframe to Zerodha format
   const kiteTimeframe = convertTimeframe(timeframe);
   const toDate = new Date();
@@ -148,7 +164,7 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
     `from=${fromDate.toISOString().split('T')[0]}&to=${toDate.toISOString().split('T')[0]}`,
     {
       headers: {
-        'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+        'Authorization': `token ${apiKey}:${accessToken}`,
         'X-Kite-Version': '3',
       },
     }
@@ -174,11 +190,16 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
 }
 
 async function fetchLiveOptionChainData(symbol: string, accessToken: string) {
+  const apiKey = Deno.env.get('ZERODHA_API_KEY');
+  if (!apiKey) {
+    throw new Error('ZERODHA_API_KEY not found in environment secrets');
+  }
+
   // For options, we need to construct the option symbols
   // This is a simplified version - you might need to enhance based on your needs
   const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
-      'Authorization': `token ${Deno.env.get('ZERODHA_API_KEY')}:${accessToken}`,
+      'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
     },
   });
