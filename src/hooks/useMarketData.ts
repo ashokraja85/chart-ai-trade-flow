@@ -48,7 +48,7 @@ export const useMarketData = ({
       const { data: response, error: functionError } = await supabase.functions.invoke(
         'zerodha-market-data',
         {
-          body: requestBody,
+          body: JSON.stringify(requestBody),
           headers: {
             'Content-Type': 'application/json',
           }
