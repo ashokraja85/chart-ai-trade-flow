@@ -28,6 +28,8 @@ serve(async (req) => {
 
   try {
     console.log('Zerodha market data function called');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -35,13 +37,27 @@ serve(async (req) => {
     )
 
     let requestBody;
-    try {
-      requestBody = await req.json();
-      console.log('Request received:', requestBody);
-    } catch (e) {
-      console.error('Failed to parse request body:', e);
+    const requestText = await req.text();
+    console.log('Raw request text:', requestText);
+    
+    if (requestText) {
+      try {
+        requestBody = JSON.parse(requestText);
+        console.log('Parsed request body:', requestBody);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON in request body' }),
+          { 
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    } else {
+      console.error('Empty request body received');
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        JSON.stringify({ error: 'Empty request body' }),
         { 
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
