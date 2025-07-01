@@ -20,7 +20,7 @@ export const useMarketData = ({
   symbol,
   dataType,
   timeframe,
-  refreshInterval = 2000 // Reduced to 2 seconds for truly live feel
+  refreshInterval = 2000
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -64,14 +64,13 @@ export const useMarketData = ({
         throw new Error('No data received from API');
       }
 
-      // Check if response contains an error
       if (response.error) {
         throw new Error(response.error);
       }
 
       setData(response);
       setLastUpdated(new Date());
-      console.log(`Successfully fetched fresh ${dataType} data for ${symbol}`, response);
+      console.log(`Successfully received fresh ${dataType} data for ${symbol}`, response.last_price || 'OK');
     } catch (err) {
       console.error(`Error fetching ${dataType} data for ${symbol}:`, err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -87,7 +86,7 @@ export const useMarketData = ({
     // Initial fetch
     fetchData();
 
-    // Set up interval for real-time updates
+    // Set up interval for live updates
     let interval: NodeJS.Timeout;
     if (refreshInterval > 0) {
       interval = setInterval(fetchData, refreshInterval);
