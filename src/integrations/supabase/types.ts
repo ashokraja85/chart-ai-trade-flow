@@ -42,6 +42,72 @@ export type Database = {
         }
         Relationships: []
       }
+      market_data_cache: {
+        Row: {
+          created_at: string | null
+          data: Json
+          data_type: string
+          expires_at: string
+          id: string
+          symbol: string
+          timeframe: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data: Json
+          data_type: string
+          expires_at: string
+          id?: string
+          symbol: string
+          timeframe?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json
+          data_type?: string
+          expires_at?: string
+          id?: string
+          symbol?: string
+          timeframe?: string | null
+        }
+        Relationships: []
+      }
+      nse_stocks: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          id: string
+          industry: string | null
+          is_active: boolean | null
+          market_cap: number | null
+          sector: string | null
+          symbol: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_name: string
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          market_cap?: number | null
+          sector?: string | null
+          symbol: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          market_cap?: number | null
+          sector?: string | null
+          symbol?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -75,12 +141,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_watchlists: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          symbols: string[]
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          symbols?: string[]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          symbols?: string[]
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      clean_expired_cache: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

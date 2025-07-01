@@ -1,79 +1,112 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, TrendingUp, TrendingDown, Camera, BarChart3 } from "lucide-react";
 import { MarketOverview } from "@/components/MarketOverview";
-import { OptionChain } from "@/components/OptionChain";
-import { StockChart } from "@/components/StockChart";
-import { AIAnalyzer } from "@/components/AIAnalyzer";
 import { PortfolioView } from "@/components/PortfolioView";
+import { StockSearch } from "@/components/StockSearch";
+import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
+import { EnhancedStockChart } from "@/components/EnhancedStockChart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TrendingUp, BarChart3, Target } from "lucide-react";
 
 const Dashboard = () => {
   const [selectedSymbol, setSelectedSymbol] = useState("NIFTY");
-  const [searchQuery, setSearchQuery] = useState("");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Trading Dashboard</h1>
-            <p className="text-slate-400">Real-time market data and AI-powered analysis</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-              <Input
-                placeholder="Search stocks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-64 bg-slate-800 border-slate-700 text-white"
-              />
-            </div>
-            <Button variant="outline" className="bg-green-600 hover:bg-green-700 text-white border-green-600">
-              <Camera className="h-4 w-4 mr-2" />
-              AI Analyze
-            </Button>
-          </div>
-        </div>
-
-        {/* Market Overview */}
-        <MarketOverview />
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-          {/* Left Column - Charts and Option Chain */}
-          <div className="lg:col-span-2 space-y-6">
-            <Tabs defaultValue="chart" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-slate-800">
-                <TabsTrigger value="chart" className="text-white data-[state=active]:bg-slate-700">
-                  Stock Chart
-                </TabsTrigger>
-                <TabsTrigger value="options" className="text-white data-[state=active]:bg-slate-700">
-                  Option Chain
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="chart" className="mt-4">
-                <StockChart symbol={selectedSymbol} />
-              </TabsContent>
-              <TabsContent value="options" className="mt-4">
-                <OptionChain symbol={selectedSymbol} />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          {/* Right Column - AI Analyzer and Portfolio */}
-          <div className="space-y-6">
-            <AIAnalyzer />
-            <PortfolioView />
-          </div>
+    <div className="container mx-auto px-6 py-8 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Trading Dashboard</h1>
+          <p className="text-slate-400">Real-time market data and analysis</p>
         </div>
       </div>
+
+      {/* Market Overview */}
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Market Overview
+        </h2>
+        <MarketOverview />
+      </div>
+
+      {/* Main Trading Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Search and Portfolio */}
+        <div className="space-y-6">
+          {/* Stock Search */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Stock Search
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StockSearch 
+                onStockSelect={setSelectedSymbol}
+                selectedSymbol={selectedSymbol}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Portfolio */}
+          <PortfolioView />
+        </div>
+
+        {/* Right Column - Charts and Options */}
+        <div className="lg:col-span-2 space-y-6">
+          <Tabs defaultValue="chart" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-800">
+              <TabsTrigger value="chart" className="data-[state=active]:bg-slate-700">
+                Price Chart
+              </TabsTrigger>
+              <TabsTrigger value="options" className="data-[state=active]:bg-slate-700">
+                Option Chain
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="chart" className="space-y-4">
+              <EnhancedStockChart symbol={selectedSymbol} />
+            </TabsContent>
+            
+            <TabsContent value="options" className="space-y-4">
+              <EnhancedOptionChain symbol={selectedSymbol} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Quick Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-slate-700 p-4 rounded-lg text-center">
+              <h3 className="font-medium text-white">Active Positions</h3>
+              <p className="text-2xl font-bold text-green-400">3</p>
+            </div>
+            <div className="bg-slate-700 p-4 rounded-lg text-center">
+              <h3 className="font-medium text-white">Watchlist Items</h3>
+              <p className="text-2xl font-bold text-blue-400">12</p>
+            </div>
+            <div className="bg-slate-700 p-4 rounded-lg text-center">
+              <h3 className="font-medium text-white">Alerts Set</h3>
+              <p className="text-2xl font-bold text-yellow-400">5</p>
+            </div>
+            <div className="bg-slate-700 p-4 rounded-lg text-center">
+              <h3 className="font-medium text-white">P&L Today</h3>
+              <p className="text-2xl font-bold text-green-400">+₹2,450</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
