@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
@@ -23,9 +22,15 @@ serve(async (req) => {
     console.log('Fresh request at:', new Date().toISOString());
     
     const requestBody = await req.json();
-    const { symbol = 'NIFTY', dataType = 'quote', timeframe = 'live', access_token } = requestBody;
+    console.log('Request body received:', requestBody);
     
-    if (!access_token) {
+    const { symbol = 'NIFTY', dataType = 'quote', timeframe = 'live', accessToken, access_token } = requestBody;
+    
+    // Handle both accessToken and access_token for compatibility
+    const token = accessToken || access_token;
+    
+    if (!token) {
+      console.error('No access token provided in request');
       throw new Error('Access token is required. Please authenticate with Zerodha first.');
     }
 
@@ -35,16 +40,16 @@ serve(async (req) => {
     
     switch (dataType) {
       case 'quote':
-        responseData = await fetchLiveQuoteData(symbol, access_token);
+        responseData = await fetchLiveQuoteData(symbol, token);
         break;
       case 'ohlcv':
-        responseData = await fetchLiveOHLCVData(symbol, timeframe, access_token);
+        responseData = await fetchLiveOHLCVData(symbol, timeframe, token);
         break;
       case 'option_chain':
-        responseData = await fetchLiveOptionChainData(symbol, access_token);
+        responseData = await fetchLiveOptionChainData(symbol, token);
         break;
       default:
-        responseData = await fetchLiveQuoteData(symbol, access_token);
+        responseData = await fetchLiveQuoteData(symbol, token);
     }
 
     console.log(`Live data fetched for ${symbol}:`, responseData?.last_price || 'OK');
