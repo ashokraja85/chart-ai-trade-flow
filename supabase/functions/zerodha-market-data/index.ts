@@ -42,14 +42,12 @@ const baseMarketData = {
   }
 };
 
-// Generate realistic price with timestamp-based variations
 function generateRealisticPrice(symbol: string, baseData: any) {
   const now = new Date();
   const timestamp = now.getTime();
   
-  // Use timestamp for consistent but changing variations
-  const timeBasedVariation = Math.sin(timestamp / 60000) * 0.005; // Changes every minute
-  const secondVariation = Math.sin(timestamp / 1000) * 0.002; // Fast oscillation
+  const timeBasedVariation = Math.sin(timestamp / 60000) * 0.005;
+  const secondVariation = Math.sin(timestamp / 1000) * 0.002;
   const randomComponent = (Math.random() - 0.5) * 0.008;
   
   const totalVariation = timeBasedVariation + secondVariation + randomComponent + baseData.trend;
@@ -76,7 +74,7 @@ function generateRealisticPrice(symbol: string, baseData: any) {
   };
 }
 
-async function fetchQuoteData(symbol: string) {
+function fetchQuoteData(symbol: string) {
   const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
   const priceData = generateRealisticPrice(symbol, baseData);
   
@@ -86,7 +84,7 @@ async function fetchQuoteData(symbol: string) {
   };
 }
 
-async function fetchOHLCVData(symbol: string, timeframe: string) {
+function fetchOHLCVData(symbol: string, timeframe: string) {
   const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
   const candles = [];
   const basePrice = baseData.basePrice;
@@ -119,7 +117,7 @@ async function fetchOHLCVData(symbol: string, timeframe: string) {
   return { candles, symbol, timeframe };
 }
 
-async function fetchOptionChainData(symbol: string) {
+function fetchOptionChainData(symbol: string) {
   const baseData = baseMarketData[symbol as keyof typeof baseMarketData] || baseMarketData['NIFTY'];
   const strikes = [];
   const currentPrice = generateRealisticPrice(symbol, baseData).last_price;
@@ -127,7 +125,6 @@ async function fetchOptionChainData(symbol: string) {
   
   for (let i = -10; i <= 10; i++) {
     const strike = baseStrike + (i * 50);
-    const isATM = Math.abs(strike - currentPrice) < 25;
     const distanceFromATM = Math.abs(strike - currentPrice);
     
     const callPremium = Math.max(1, Math.max(0, currentPrice - strike) + (50 - distanceFromATM * 0.1));
@@ -143,7 +140,7 @@ async function fetchOptionChainData(symbol: string) {
       putLTP: Number(putPremium.toFixed(2)),
       putChange: Number(((Math.random() - 0.5) * 10).toFixed(2)),
       putVolume: Math.floor(Math.random() * 5000),
-      isATM
+      isATM: Math.abs(strike - currentPrice) < 25
     });
   }
   
@@ -181,16 +178,16 @@ serve(async (req) => {
     
     switch (dataType) {
       case 'quote':
-        responseData = await fetchQuoteData(symbol);
+        responseData = fetchQuoteData(symbol);
         break;
       case 'ohlcv':
-        responseData = await fetchOHLCVData(symbol, timeframe);
+        responseData = fetchOHLCVData(symbol, timeframe);
         break;
       case 'option_chain':
-        responseData = await fetchOptionChainData(symbol);
+        responseData = fetchOptionChainData(symbol);
         break;
       default:
-        responseData = await fetchQuoteData(symbol);
+        responseData = fetchQuoteData(symbol);
     }
 
     console.log(`Fresh data generated for ${symbol}:`, responseData.last_price || 'OK');
@@ -198,6 +195,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify(responseData),
       { 
+        status: 200,
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json',
@@ -212,7 +210,10 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { 
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
       }
     );
   }
