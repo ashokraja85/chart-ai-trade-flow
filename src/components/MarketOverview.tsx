@@ -7,13 +7,13 @@ import { useZerodhaAuth } from "@/hooks/useZerodhaAuth";
 
 export const MarketOverview = () => {
   const symbols = ['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS'];
-  const { accessToken } = useZerodhaAuth();
+  const { accessToken, isAuthenticated } = useZerodhaAuth();
   
   const MarketCard = ({ symbol }: { symbol: string }) => {
     const { data, loading, error } = useMarketData({
       symbol,
       dataType: 'quote',
-      refreshInterval: 3000,
+      refreshInterval: isAuthenticated ? 3000 : 0, // Only refresh if authenticated
       accessToken
     });
 
@@ -26,6 +26,19 @@ export const MarketOverview = () => {
         default: return sym;
       }
     };
+
+    if (!isAuthenticated) {
+      return (
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
+              <p className="text-xs text-orange-400 mt-2">Connect to Zerodha for live data</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
 
     if (loading && !data) {
       return (
@@ -45,9 +58,7 @@ export const MarketOverview = () => {
           <CardContent className="p-4">
             <div className="text-center">
               <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
-              <p className="text-xs text-red-400 mt-2">
-                {error.includes('authenticate') ? 'Connect Zerodha' : 'Error loading data'}
-              </p>
+              <p className="text-xs text-red-400 mt-2">Error loading data</p>
             </div>
           </CardContent>
         </Card>
@@ -64,7 +75,7 @@ export const MarketOverview = () => {
             <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
             <div className="flex items-center gap-1">
               {loading && <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />}
-              {accessToken && (
+              {isAuthenticated && (
                 <Badge className="bg-green-600 text-white text-xs">LIVE</Badge>
               )}
               {isPositive ? (

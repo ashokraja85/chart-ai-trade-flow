@@ -25,7 +25,7 @@ export const useMarketData = ({
   accessToken
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -35,7 +35,15 @@ export const useMarketData = ({
       return;
     }
 
+    // Don't fetch if no access token
+    if (!accessToken) {
+      setError('Please authenticate with Zerodha to view live market data');
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       setError(null);
       console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha...`);
       
@@ -86,7 +94,7 @@ export const useMarketData = ({
   useEffect(() => {
     if (!symbol) return;
 
-    // Only fetch if we have access token for live data
+    // Only fetch if we have access token
     if (!accessToken) {
       setError('Please authenticate with Zerodha to view live market data');
       setLoading(false);
@@ -107,7 +115,7 @@ export const useMarketData = ({
         clearInterval(interval);
       }
     };
-  }, [fetchData, refreshInterval]);
+  }, [fetchData, refreshInterval, accessToken]);
 
   return { data, loading, error, lastUpdated };
 };
