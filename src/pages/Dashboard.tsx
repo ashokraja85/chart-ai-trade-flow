@@ -7,12 +7,26 @@ import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
 import { EnhancedStockChart } from "@/components/EnhancedStockChart";
 import { AIAnalyzer } from "@/components/AIAnalyzer";
 import { ZerodhaAuthButton } from "@/components/ZerodhaAuthButton";
+import { OrderPlacement } from "@/components/OrderPlacement";
+import { PositionsHoldings } from "@/components/PositionsHoldings";
+import { OrderBook } from "@/components/OrderBook";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, BarChart3, Target } from "lucide-react";
+import { TrendingUp, BarChart3, Target, ShoppingCart } from "lucide-react";
+import { useMarketData } from "@/hooks/useMarketData";
+import { useZerodhaAuth } from "@/hooks/useZerodhaAuth";
 
 const Dashboard = () => {
   const [selectedSymbol, setSelectedSymbol] = useState("NIFTY");
+  const { accessToken } = useZerodhaAuth();
+  
+  // Get current price for order placement
+  const { data: quoteData } = useMarketData({
+    symbol: selectedSymbol,
+    dataType: 'quote',
+    accessToken,
+    refreshInterval: 5000
+  });
 
   return (
     <div className="container mx-auto px-6 py-8 space-y-6">
@@ -60,15 +74,21 @@ const Dashboard = () => {
           <PortfolioView />
         </div>
 
-        {/* Right Column - Charts and Options */}
+        {/* Right Column - Charts and Trading */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="chart" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-800">
+            <TabsList className="grid w-full grid-cols-4 bg-slate-800">
               <TabsTrigger value="chart" className="data-[state=active]:bg-slate-700">
-                Price Chart
+                Chart
               </TabsTrigger>
               <TabsTrigger value="options" className="data-[state=active]:bg-slate-700">
-                Option Chain
+                Options
+              </TabsTrigger>
+              <TabsTrigger value="trade" className="data-[state=active]:bg-slate-700">
+                Trade
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="data-[state=active]:bg-slate-700">
+                Orders
               </TabsTrigger>
             </TabsList>
             
@@ -86,35 +106,64 @@ const Dashboard = () => {
             <TabsContent value="options" className="space-y-4">
               <EnhancedOptionChain symbol={selectedSymbol} />
             </TabsContent>
+            
+            <TabsContent value="trade" className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <OrderPlacement 
+                  symbol={selectedSymbol} 
+                  lastPrice={quoteData?.last_price || 0}
+                />
+                <PositionsHoldings />
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="orders" className="space-y-4">
+              <OrderBook />
+            </TabsContent>
           </Tabs>
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Trading Summary - Real-time Portfolio Overview */}
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            Quick Actions
+            <ShoppingCart className="h-5 w-5" />
+            Trading Summary
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-slate-700 p-4 rounded-lg text-center">
-              <h3 className="font-medium text-white">Active Positions</h3>
-              <p className="text-2xl font-bold text-green-400">3</p>
+              <h3 className="font-medium text-white">Current Price</h3>
+              <p className="text-2xl font-bold text-blue-400">
+                ₹{quoteData?.last_price?.toFixed(2) || '0.00'}
+              </p>
+              <span className="text-xs text-slate-400">{selectedSymbol}</span>
             </div>
             <div className="bg-slate-700 p-4 rounded-lg text-center">
-              <h3 className="font-medium text-white">Watchlist Items</h3>
-              <p className="text-2xl font-bold text-blue-400">12</p>
+              <h3 className="font-medium text-white">Day Change</h3>
+              <p className={`text-2xl font-bold ${
+                (quoteData?.change || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {quoteData?.change >= 0 ? '+' : ''}₹{quoteData?.change?.toFixed(2) || '0.00'}
+              </p>
+              <span className="text-xs text-slate-400">
+                ({quoteData?.change_percent >= 0 ? '+' : ''}{quoteData?.change_percent?.toFixed(2) || '0.00'}%)
+              </span>
             </div>
             <div className="bg-slate-700 p-4 rounded-lg text-center">
-              <h3 className="font-medium text-white">Alerts Set</h3>
-              <p className="text-2xl font-bold text-yellow-400">5</p>
+              <h3 className="font-medium text-white">Volume</h3>
+              <p className="text-2xl font-bold text-yellow-400">
+                {quoteData?.volume ? (quoteData.volume / 1000).toFixed(0) + 'K' : '0'}
+              </p>
             </div>
             <div className="bg-slate-700 p-4 rounded-lg text-center">
-              <h3 className="font-medium text-white">P&L Today</h3>
-              <p className="text-2xl font-bold text-green-400">+₹2,450</p>
+              <h3 className="font-medium text-white">Day Range</h3>
+              <div className="text-sm text-slate-300">
+                <p>L: ₹{quoteData?.ohlc?.low?.toFixed(2) || '0.00'}</p>
+                <p>H: ₹{quoteData?.ohlc?.high?.toFixed(2) || '0.00'}</p>
+              </div>
             </div>
           </div>
         </CardContent>

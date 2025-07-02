@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.ai-chart-analyzer]
 verify_jwt = false
+
+[functions.zerodha-trading]
+verify_jwt = false
