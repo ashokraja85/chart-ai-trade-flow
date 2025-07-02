@@ -5,6 +5,7 @@ import { PortfolioView } from "@/components/PortfolioView";
 import { StockSearch } from "@/components/StockSearch";
 import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
 import { EnhancedStockChart } from "@/components/EnhancedStockChart";
+import { AIAnalyzer } from "@/components/AIAnalyzer";
 import { ZerodhaAuthButton } from "@/components/ZerodhaAuthButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +73,14 @@ const Dashboard = () => {
             </TabsList>
             
             <TabsContent value="chart" className="space-y-4">
-              <EnhancedStockChart symbol={selectedSymbol} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <EnhancedStockChart symbol={selectedSymbol} />
+                </div>
+                <div>
+                  <AIAnalyzer symbol={selectedSymbol} />
+                </div>
+              </div>
             </TabsContent>
             
             <TabsContent value="options" className="space-y-4">

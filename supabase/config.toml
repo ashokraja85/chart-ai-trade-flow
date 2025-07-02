@@ -2,7 +2,10 @@
 project_id = "skurfdgwffrqvyercpxz"
 
 [functions.zerodha-market-data]
-verify_jwt = true
+verify_jwt = false
 
 [functions.zerodha-auth]
-verify_jwt = true
+verify_jwt = false
+
+[functions.ai-chart-analyzer]
+verify_jwt = false
