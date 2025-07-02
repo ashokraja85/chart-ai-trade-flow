@@ -57,8 +57,20 @@ export const useZerodhaAuth = () => {
 
       console.log('Login URL response:', data, error);
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        console.error('Login URL error:', error);
+        throw new Error(`Failed to get login URL: ${error.message}`);
+      }
+      
+      if (data?.error) {
+        console.error('Login URL data error:', data.error);
+        throw new Error(data.error);
+      }
+
+      if (!data?.login_url) {
+        console.error('No login URL received:', data);
+        throw new Error('No login URL received from server');
+      }
 
       // Redirect to Zerodha login
       console.log('Redirecting to Zerodha login:', data.login_url);
