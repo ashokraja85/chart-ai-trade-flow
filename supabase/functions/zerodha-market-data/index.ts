@@ -6,7 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Instrument token mappings (you may need to expand this)
+// Correct symbol mappings as per Kite Connect v3 documentation
+// Use exchange:tradingsymbol format as per official docs
+const symbolMappings: Record<string, string> = {
+  'NIFTY': 'NSE:NIFTY 50',        // Correct symbol for NIFTY 50 index
+  'BANKNIFTY': 'NSE:NIFTY BANK',  // Correct symbol for BANK NIFTY index  
+  'RELIANCE': 'NSE:RELIANCE',     // Equity symbol
+  'TCS': 'NSE:TCS',               // Equity symbol
+};
+
+// Instrument token mappings (for reference, but we use exchange:symbol format)
 const instrumentTokens: Record<string, string> = {
   'NIFTY': '256265',
   'BANKNIFTY': '260105',
@@ -125,16 +134,17 @@ serve(async (req) => {
 });
 
 async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: string) {
-  const instrumentToken = instrumentTokens[symbol.toUpperCase()];
-  if (!instrumentToken) {
-    throw new Error(`Instrument token not found for symbol: ${symbol}`);
+  // Get the correct exchange:symbol format
+  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
+  if (!exchangeSymbol) {
+    throw new Error(`Symbol mapping not found for: ${symbol}`);
   }
 
-  console.log(`Making API call to Zerodha for ${symbol}`);
-  console.log(`API URL: https://api.kite.trade/quote?i=NSE:${symbol}`);
+  console.log(`Making API call to Zerodha for ${symbol} (${exchangeSymbol})`);
+  console.log(`API URL: https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`);
   console.log(`Authorization header: token ${apiKey}:${accessToken.substring(0, 10)}...`);
 
-  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
+  const response = await fetch(`https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`, {
     headers: {
       'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
@@ -170,29 +180,37 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
   const data = await response.json();
   console.log('Quote API successful - received data keys:', Object.keys(data));
   
-  const quoteData = data.data[`NSE:${symbol}`];
+  // The response data is keyed by exchange:symbol format
+  const quoteData = data.data[exchangeSymbol];
 
   if (!quoteData) {
-    throw new Error(`No quote data found for ${symbol}`);
+    throw new Error(`No quote data found for ${symbol} (${exchangeSymbol})`);
   }
 
+  // Map the response to our expected format
   return {
-    instrument_token: parseInt(instrumentToken),
+    instrument_token: quoteData.instrument_token,
     last_price: quoteData.last_price,
     change: quoteData.net_change,
-    change_percent: quoteData.change,
+    change_percent: ((quoteData.net_change / quoteData.ohlc.close) * 100),
     volume: quoteData.volume,
     ohlc: {
       open: quoteData.ohlc.open,
       high: quoteData.ohlc.high,
       low: quoteData.ohlc.low,
-      close: quoteData.ohlc.close || quoteData.last_price
+      close: quoteData.ohlc.close
     },
-    timestamp: new Date().toISOString()
+    timestamp: quoteData.timestamp || new Date().toISOString()
   };
 }
 
 async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken: string, apiKey: string) {
+  // Get the correct exchange:symbol format
+  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
+  if (!exchangeSymbol) {
+    throw new Error(`Symbol mapping not found for: ${symbol}`);
+  }
+
   const instrumentToken = instrumentTokens[symbol.toUpperCase()];
   if (!instrumentToken) {
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
@@ -257,11 +275,17 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
 }
 
 async function fetchLiveOptionChainData(symbol: string, accessToken: string, apiKey: string) {
+  // Get the correct exchange:symbol format
+  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
+  if (!exchangeSymbol) {
+    throw new Error(`Symbol mapping not found for: ${symbol}`);
+  }
+
   // For options, we need to construct the option symbols
   // This is a simplified version - you might need to enhance based on your needs
-  console.log(`Making option chain API call to Zerodha for ${symbol}`);
+  console.log(`Making option chain API call to Zerodha for ${symbol} (${exchangeSymbol})`);
   
-  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
+  const response = await fetch(`https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`, {
     headers: {
       'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
@@ -289,10 +313,13 @@ async function fetchLiveOptionChainData(symbol: string, accessToken: string, api
   }
 
   const data = await response.json();
-  const quoteData = data.data[`NSE:${symbol}`];
-  const spotPrice = quoteData.last_price;
+  const quoteData = data.data[exchangeSymbol];
+  const spotPrice = quoteData?.last_price;
 
-  // Generate option chain structure (you'll need to enhance this with actual option data)
+  if (!spotPrice) {
+
+    throw new Error(`No spot price data found for ${symbol} (${exchangeSymbol})`);
+  }
   const baseStrike = Math.round(spotPrice / 50) * 50;
   const strikes = [];
 
