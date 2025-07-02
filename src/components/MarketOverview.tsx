@@ -40,14 +40,14 @@ export const MarketOverview = () => {
       );
     }
 
-    // Show error state only if no data is available
+    // Show error state or no connection state
     if (error && !data) {
       return (
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
             <div className="text-center">
               <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
-              <p className="text-xs text-red-400 mt-2">Error loading data</p>
+              <p className="text-xs text-yellow-400 mt-2">Connect to Zerodha for live data</p>
             </div>
           </CardContent>
         </Card>
@@ -64,10 +64,7 @@ export const MarketOverview = () => {
             <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
             <div className="flex items-center gap-1">
               {loading && <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />}
-              {data?.mock && (
-                <Badge className="bg-orange-600 text-white text-xs">DEMO</Badge>
-              )}
-              {isAuthenticated && !data?.mock && (
+              {isAuthenticated && data && (
                 <Badge className="bg-green-600 text-white text-xs">LIVE</Badge>
               )}
               {isPositive ? (

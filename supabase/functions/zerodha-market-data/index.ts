@@ -69,21 +69,7 @@ serve(async (req) => {
     
     if (!token || token.trim() === '') {
       console.error('No valid access token provided in request or environment');
-      // Return mock data when no token is available for development
-      console.log(`Returning mock data for development - ${symbol} (${dataType})`);
-      
-      const mockData = generateMockData(symbol, dataType);
-      return new Response(
-        JSON.stringify(mockData),
-        { 
-          status: 200,
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate'
-          } 
-        }
-      );
+      throw new Error('Access token required. Please connect to Zerodha to get live market data.');
     }
 
     console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha API`);
@@ -354,80 +340,3 @@ function convertTimeframe(timeframe: string): string {
   return timeframeMap[timeframe] || '5minute';
 }
 
-function generateMockData(symbol: string, dataType: string) {
-  const basePrice = getBasePriceForSymbol(symbol);
-  const change = (Math.random() * 200) - 100; // -100 to +100
-  const changePercent = (change / basePrice) * 100;
-  
-  switch (dataType) {
-    case 'quote':
-      return {
-        last_price: Math.round(basePrice + change),
-        change: Math.round(change * 100) / 100,
-        change_percent: Math.round(changePercent * 100) / 100,
-        volume: Math.floor(Math.random() * 10000000),
-        ohlc: {
-          open: Math.round(basePrice),
-          high: Math.round(basePrice + Math.abs(change) + (Math.random() * 50)),
-          low: Math.round(basePrice - Math.abs(change) - (Math.random() * 50)),
-          close: Math.round(basePrice + change)
-        },
-        timestamp: new Date().toISOString(),
-        mock: true
-      };
-    case 'option_chain':
-      const spotPrice = basePrice + change;
-      const baseStrike = Math.round(spotPrice / 50) * 50;
-      const strikes = [];
-      
-      for (let i = -10; i <= 10; i++) {
-        const strike = baseStrike + (i * 50);
-        strikes.push({
-          strike,
-          callOI: Math.floor(Math.random() * 100000),
-          callLTP: Math.max(1, Math.max(0, spotPrice - strike) + (Math.random() * 10)),
-          callChange: (Math.random() * 20) - 10,
-          callVolume: Math.floor(Math.random() * 50000),
-          putOI: Math.floor(Math.random() * 100000),
-          putLTP: Math.max(1, Math.max(0, strike - spotPrice) + (Math.random() * 10)),
-          putChange: (Math.random() * 20) - 10,
-          putVolume: Math.floor(Math.random() * 50000),
-          isATM: Math.abs(strike - spotPrice) < 25
-        });
-      }
-      
-      return { strikes, symbol, spotPrice, mock: true };
-    case 'ohlcv':
-      const candles = [];
-      const now = Date.now();
-      for (let i = 0; i < 20; i++) {
-        const time = now - (i * 5 * 60 * 1000); // 5 minute intervals
-        const open = basePrice + (Math.random() * 100) - 50;
-        const close = open + (Math.random() * 50) - 25;
-        const high = Math.max(open, close) + (Math.random() * 20);
-        const low = Math.min(open, close) - (Math.random() * 20);
-        
-        candles.unshift({
-          time: Math.floor(time / 1000),
-          open: Math.round(open),
-          high: Math.round(high),
-          low: Math.round(low),
-          close: Math.round(close),
-          volume: Math.floor(Math.random() * 1000000)
-        });
-      }
-      return { candles, symbol, timeframe: 'live', mock: true };
-    default:
-      return generateMockData(symbol, 'quote');
-  }
-}
-
-function getBasePriceForSymbol(symbol: string): number {
-  const basePrices: Record<string, number> = {
-    'NIFTY': 19650,
-    'BANKNIFTY': 44800,
-    'RELIANCE': 2850,
-    'TCS': 3950,
-  };
-  return basePrices[symbol.toUpperCase()] || 1000;
-}
