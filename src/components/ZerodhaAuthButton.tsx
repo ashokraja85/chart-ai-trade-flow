@@ -61,10 +61,7 @@ export const ZerodhaAuthButton = () => {
           </Button>
         ) : (
           <Button 
-            onClick={() => {
-              console.log('Connect button clicked');
-              initiateLogin();
-            }}
+            onClick={initiateLogin}
             className="w-full bg-orange-600 hover:bg-orange-700"
             disabled={loading}
           >

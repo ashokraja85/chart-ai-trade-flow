@@ -381,39 +381,6 @@ export type Database = {
         }
         Relationships: []
       }
-      zerodha_tokens: {
-        Row: {
-          access_token: string
-          api_key: string | null
-          created_at: string
-          expires_at: string | null
-          id: string
-          is_active: boolean
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_token: string
-          api_key?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_token?: string
-          api_key?: string | null
-          created_at?: string
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never

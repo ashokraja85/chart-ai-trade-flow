@@ -13,7 +13,7 @@ export const MarketOverview = () => {
     const { data, loading, error } = useMarketData({
       symbol,
       dataType: 'quote',
-      refreshInterval: 4000, // Always refresh to get mock/live data
+      refreshInterval: isAuthenticated ? 3000 : 0, // Only refresh if authenticated
       accessToken
     });
 
@@ -27,7 +27,19 @@ export const MarketOverview = () => {
       }
     };
 
-    // Show loading state if data hasn't loaded yet
+    if (!isAuthenticated) {
+      return (
+        <Card className="bg-slate-800 border-slate-700">
+          <CardContent className="p-4">
+            <div className="text-center">
+              <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
+              <p className="text-xs text-orange-400 mt-2">Connect to Zerodha for live data</p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     if (loading && !data) {
       return (
         <Card className="bg-slate-800 border-slate-700">
@@ -40,14 +52,13 @@ export const MarketOverview = () => {
       );
     }
 
-    // Show error state or no connection state
     if (error && !data) {
       return (
         <Card className="bg-slate-800 border-slate-700">
           <CardContent className="p-4">
             <div className="text-center">
               <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
-              <p className="text-xs text-yellow-400 mt-2">Connect to Zerodha for live data</p>
+              <p className="text-xs text-red-400 mt-2">Error loading data</p>
             </div>
           </CardContent>
         </Card>
@@ -55,7 +66,7 @@ export const MarketOverview = () => {
     }
 
     const isPositive = (data?.change || 0) >= 0;
-    const changePercent = data?.change_percent || 0;
+    const changePercent = data?.change_percent || ((data?.change || 0) / (data?.ohlc?.open || 1) * 100);
 
     return (
       <Card className="bg-slate-800 border-slate-700 hover:bg-slate-700 transition-colors">
@@ -64,7 +75,7 @@ export const MarketOverview = () => {
             <h3 className="text-sm font-medium text-slate-300">{getDisplayName(symbol)}</h3>
             <div className="flex items-center gap-1">
               {loading && <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />}
-              {isAuthenticated && data && (
+              {isAuthenticated && (
                 <Badge className="bg-green-600 text-white text-xs">LIVE</Badge>
               )}
               {isPositive ? (

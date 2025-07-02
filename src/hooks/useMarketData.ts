@@ -21,7 +21,7 @@ export const useMarketData = ({
   symbol,
   dataType,
   timeframe,
-  refreshInterval = 4000,
+  refreshInterval = 3000,
   accessToken
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);
@@ -46,7 +46,7 @@ export const useMarketData = ({
         symbol,
         dataType,
         timeframe: timeframe || 'live',
-        accessToken: accessToken && accessToken.trim() !== '' ? accessToken : null
+        accessToken: accessToken || undefined // Send as accessToken to match edge function
       };
 
       console.log('Request body:', requestBody);
@@ -87,12 +87,9 @@ export const useMarketData = ({
   }, [symbol, dataType, timeframe, accessToken]);
 
   useEffect(() => {
-    if (!symbol || !accessToken) {
-      console.log('No symbol or access token available, skipping data fetch');
-      setLoading(false);
-      return;
-    }
+    if (!symbol) return;
 
+    // Always try to fetch data - the edge function will handle fallback to environment token
     console.log(`Setting up data fetch for ${symbol} with refresh interval: ${refreshInterval}`);
     
     // Initial fetch

@@ -6,16 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Correct symbol mappings as per Kite Connect v3 documentation
-// Use exchange:tradingsymbol format as per official docs
-const symbolMappings: Record<string, string> = {
-  'NIFTY': 'NSE:NIFTY 50',        // Correct symbol for NIFTY 50 index
-  'BANKNIFTY': 'NSE:NIFTY BANK',  // Correct symbol for BANK NIFTY index  
-  'RELIANCE': 'NSE:RELIANCE',     // Equity symbol
-  'TCS': 'NSE:TCS',               // Equity symbol
-};
-
-// Instrument token mappings (for reference, but we use exchange:symbol format)
+// Instrument token mappings (you may need to expand this)
 const instrumentTokens: Record<string, string> = {
   'NIFTY': '256265',
   'BANKNIFTY': '260105',
@@ -38,11 +29,6 @@ serve(async (req) => {
     
     // Handle both accessToken and access_token for compatibility
     let token = accessToken || access_token;
-    
-    // Check if token is an object (serialization issue) and extract value
-    if (typeof token === 'object' && token !== null) {
-      token = token.value || null;
-    }
     
     // If no token from request, try to get from environment (for shared tokens)
     if (!token || token.trim() === '') {
@@ -69,7 +55,7 @@ serve(async (req) => {
     
     if (!token || token.trim() === '') {
       console.error('No valid access token provided in request or environment');
-      throw new Error('Access token required. Please connect to Zerodha to get live market data.');
+      throw new Error('Access token is required. Please authenticate with Zerodha first or set ZERODHA_ACCESS_TOKEN in secrets.');
     }
 
     console.log(`Fetching live ${dataType} data for ${symbol} from Zerodha API`);
@@ -120,17 +106,16 @@ serve(async (req) => {
 });
 
 async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: string) {
-  // Get the correct exchange:symbol format
-  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
-  if (!exchangeSymbol) {
-    throw new Error(`Symbol mapping not found for: ${symbol}`);
+  const instrumentToken = instrumentTokens[symbol.toUpperCase()];
+  if (!instrumentToken) {
+    throw new Error(`Instrument token not found for symbol: ${symbol}`);
   }
 
-  console.log(`Making API call to Zerodha for ${symbol} (${exchangeSymbol})`);
-  console.log(`API URL: https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`);
+  console.log(`Making API call to Zerodha for ${symbol}`);
+  console.log(`API URL: https://api.kite.trade/quote?i=NSE:${symbol}`);
   console.log(`Authorization header: token ${apiKey}:${accessToken.substring(0, 10)}...`);
 
-  const response = await fetch(`https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`, {
+  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
       'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
@@ -166,37 +151,29 @@ async function fetchLiveQuoteData(symbol: string, accessToken: string, apiKey: s
   const data = await response.json();
   console.log('Quote API successful - received data keys:', Object.keys(data));
   
-  // The response data is keyed by exchange:symbol format
-  const quoteData = data.data[exchangeSymbol];
+  const quoteData = data.data[`NSE:${symbol}`];
 
   if (!quoteData) {
-    throw new Error(`No quote data found for ${symbol} (${exchangeSymbol})`);
+    throw new Error(`No quote data found for ${symbol}`);
   }
 
-  // Map the response to our expected format
   return {
-    instrument_token: quoteData.instrument_token,
+    instrument_token: parseInt(instrumentToken),
     last_price: quoteData.last_price,
     change: quoteData.net_change,
-    change_percent: ((quoteData.net_change / quoteData.ohlc.close) * 100),
+    change_percent: quoteData.change,
     volume: quoteData.volume,
     ohlc: {
       open: quoteData.ohlc.open,
       high: quoteData.ohlc.high,
       low: quoteData.ohlc.low,
-      close: quoteData.ohlc.close
+      close: quoteData.ohlc.close || quoteData.last_price
     },
-    timestamp: quoteData.timestamp || new Date().toISOString()
+    timestamp: new Date().toISOString()
   };
 }
 
 async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken: string, apiKey: string) {
-  // Get the correct exchange:symbol format
-  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
-  if (!exchangeSymbol) {
-    throw new Error(`Symbol mapping not found for: ${symbol}`);
-  }
-
   const instrumentToken = instrumentTokens[symbol.toUpperCase()];
   if (!instrumentToken) {
     throw new Error(`Instrument token not found for symbol: ${symbol}`);
@@ -261,17 +238,11 @@ async function fetchLiveOHLCVData(symbol: string, timeframe: string, accessToken
 }
 
 async function fetchLiveOptionChainData(symbol: string, accessToken: string, apiKey: string) {
-  // Get the correct exchange:symbol format
-  const exchangeSymbol = symbolMappings[symbol.toUpperCase()];
-  if (!exchangeSymbol) {
-    throw new Error(`Symbol mapping not found for: ${symbol}`);
-  }
-
   // For options, we need to construct the option symbols
   // This is a simplified version - you might need to enhance based on your needs
-  console.log(`Making option chain API call to Zerodha for ${symbol} (${exchangeSymbol})`);
+  console.log(`Making option chain API call to Zerodha for ${symbol}`);
   
-  const response = await fetch(`https://api.kite.trade/quote?i=${encodeURIComponent(exchangeSymbol)}`, {
+  const response = await fetch(`https://api.kite.trade/quote?i=NSE:${symbol}`, {
     headers: {
       'Authorization': `token ${apiKey}:${accessToken}`,
       'X-Kite-Version': '3',
@@ -299,13 +270,10 @@ async function fetchLiveOptionChainData(symbol: string, accessToken: string, api
   }
 
   const data = await response.json();
-  const quoteData = data.data[exchangeSymbol];
-  const spotPrice = quoteData?.last_price;
+  const quoteData = data.data[`NSE:${symbol}`];
+  const spotPrice = quoteData.last_price;
 
-  if (!spotPrice) {
-
-    throw new Error(`No spot price data found for ${symbol} (${exchangeSymbol})`);
-  }
+  // Generate option chain structure (you'll need to enhance this with actual option data)
   const baseStrike = Math.round(spotPrice / 50) * 50;
   const strikes = [];
 
@@ -339,4 +307,3 @@ function convertTimeframe(timeframe: string): string {
   };
   return timeframeMap[timeframe] || '5minute';
 }
-

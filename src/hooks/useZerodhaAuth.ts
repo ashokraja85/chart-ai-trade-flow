@@ -9,17 +9,6 @@ interface ZerodhaAuthState {
   error: string | null;
 }
 
-interface ZerodhaTokenData {
-  id: string;
-  user_id: string;
-  access_token: string;
-  api_key: string | null;
-  created_at: string;
-  updated_at: string;
-  expires_at: string | null;
-  is_active: boolean;
-}
-
 export const useZerodhaAuth = () => {
   const [authState, setAuthState] = useState<ZerodhaAuthState>({
     isAuthenticated: false,
@@ -28,56 +17,23 @@ export const useZerodhaAuth = () => {
     error: null
   });
 
-  const fetchTokenFromSupabase = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log('No authenticated user found');
-        setAuthState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
-      console.log('Fetching Zerodha token from Supabase for user:', user.id);
-      
-      const { data: tokenData, error } = await supabase
-        .from('zerodha_tokens')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching token from Supabase:', error);
-        setAuthState(prev => ({ ...prev, loading: false, error: error.message }));
-        return;
-      }
-
-      if (tokenData) {
-        console.log('Found Zerodha token in Supabase');
-        setAuthState({
-          isAuthenticated: true,
-          accessToken: tokenData.access_token,
-          loading: false,
-          error: null
-        });
-      } else {
-        console.log('No Zerodha token found in Supabase');
-        setAuthState(prev => ({ ...prev, loading: false }));
-      }
-    } catch (error) {
-      console.error('Error in fetchTokenFromSupabase:', error);
-      setAuthState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to fetch token'
-      }));
-    }
-  };
-
   useEffect(() => {
-    // Fetch token from Supabase on component mount
-    fetchTokenFromSupabase();
+    // Check for stored access token
+    const storedToken = localStorage.getItem('zerodha_access_token');
+    console.log('Stored token found:', storedToken ? 'Yes' : 'No');
+    
+    if (storedToken && storedToken.trim() !== '') {
+      console.log('Setting authenticated state with stored token');
+      setAuthState({
+        isAuthenticated: true,
+        accessToken: storedToken,
+        loading: false,
+        error: null
+      });
+    } else {
+      console.log('No valid stored token found');
+      setAuthState(prev => ({ ...prev, loading: false }));
+    }
 
     // Check for callback parameters in URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -101,20 +57,8 @@ export const useZerodhaAuth = () => {
 
       console.log('Login URL response:', data, error);
 
-      if (error) {
-        console.error('Login URL error:', error);
-        throw new Error(`Failed to get login URL: ${error.message}`);
-      }
-      
-      if (data?.error) {
-        console.error('Login URL data error:', data.error);
-        throw new Error(data.error);
-      }
-
-      if (!data?.login_url) {
-        console.error('No login URL received:', data);
-        throw new Error('No login URL received from server');
-      }
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       // Redirect to Zerodha login
       console.log('Redirecting to Zerodha login:', data.login_url);
@@ -143,40 +87,20 @@ export const useZerodhaAuth = () => {
       if (error) throw error;
       if (data.error) throw new Error(data.error);
 
-      const accessToken = data.access_token;
-      console.log('Access token received, storing in Supabase');
-
-      // Store access token in Supabase instead of localStorage
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-
-      const { error: insertError } = await supabase
-        .from('zerodha_tokens')
-        .upsert({
-          user_id: user.id,
-          access_token: accessToken,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertError) {
-        console.error('Error storing token in Supabase:', insertError);
-        throw new Error('Failed to store access token');
-      }
+      // Store access token
+      console.log('Storing access token in localStorage');
+      localStorage.setItem('zerodha_access_token', data.access_token);
       
       setAuthState({
         isAuthenticated: true,
-        accessToken: accessToken,
+        accessToken: data.access_token,
         loading: false,
         error: null
       });
 
       // Clean up URL
       window.history.replaceState({}, document.title, window.location.pathname);
-      console.log('Authentication successful! Token stored in Supabase');
+      console.log('Authentication successful!');
     } catch (error) {
       console.error('Session generation error:', error);
       setAuthState(prev => ({
@@ -187,32 +111,15 @@ export const useZerodhaAuth = () => {
     }
   };
 
-  const logout = async () => {
-    try {
-      console.log('Logging out and clearing stored token from Supabase');
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Deactivate token in Supabase
-        await supabase
-          .from('zerodha_tokens')
-          .update({ is_active: false })
-          .eq('user_id', user.id);
-      }
-      
-      // Also clear localStorage for backward compatibility
-      localStorage.removeItem('zerodha_access_token');
-      
-      setAuthState({
-        isAuthenticated: false,
-        accessToken: null,
-        loading: false,
-        error: null
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const logout = () => {
+    console.log('Logging out and clearing stored token');
+    localStorage.removeItem('zerodha_access_token');
+    setAuthState({
+      isAuthenticated: false,
+      accessToken: null,
+      loading: false,
+      error: null
+    });
   };
 
   return {
