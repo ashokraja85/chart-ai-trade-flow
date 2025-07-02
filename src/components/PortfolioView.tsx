@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { WishlistManager } from "@/components/WishlistManager";
 
 export const PortfolioView = () => {
   const positions = [
@@ -13,47 +14,53 @@ export const PortfolioView = () => {
   const totalPnL = positions.reduce((sum, pos) => sum + pos.pnl, 0);
 
   return (
-    <Card className="bg-slate-800 border-slate-700">
-      <CardHeader>
-        <CardTitle className="text-white">Portfolio</CardTitle>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-400">Total P&L:</span>
-          <Badge className={`${totalPnL >= 0 ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-            {totalPnL >= 0 ? '+' : ''}₹{totalPnL}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {positions.map((position) => (
-            <div key={position.symbol} className="bg-slate-700 p-3 rounded-lg">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-white">{position.symbol}</span>
-                <div className="flex items-center gap-1">
-                  {position.pnl >= 0 ? (
-                    <TrendingUp className="h-3 w-3 text-green-400" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 text-red-400" />
-                  )}
-                  <span className={`text-xs font-medium ${
-                    position.pnl >= 0 ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {position.pnlPercent > 0 ? '+' : ''}{position.pnlPercent}%
+    <div className="space-y-6">
+      {/* Wishlist Manager */}
+      <WishlistManager />
+      
+      {/* Portfolio Summary */}
+      <Card className="bg-slate-800 border-slate-700">
+        <CardHeader>
+          <CardTitle className="text-white">Quick Positions</CardTitle>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Total P&L:</span>
+            <Badge className={`${totalPnL >= 0 ? 'bg-green-600' : 'bg-red-600'} text-white`}>
+              {totalPnL >= 0 ? '+' : ''}₹{totalPnL}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {positions.map((position) => (
+              <div key={position.symbol} className="bg-slate-700 p-3 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-white">{position.symbol}</span>
+                  <div className="flex items-center gap-1">
+                    {position.pnl >= 0 ? (
+                      <TrendingUp className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-red-400" />
+                    )}
+                    <span className={`text-xs font-medium ${
+                      position.pnl >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {position.pnlPercent > 0 ? '+' : ''}{position.pnlPercent}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-slate-400">
+                  <span>Qty: {position.qty}</span>
+                  <span>Avg: ₹{position.avgPrice}</span>
+                  <span>LTP: ₹{position.ltp}</span>
+                  <span className={position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}>
+                    {position.pnl >= 0 ? '+' : ''}₹{position.pnl}
                   </span>
                 </div>
               </div>
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Qty: {position.qty}</span>
-                <span>Avg: ₹{position.avgPrice}</span>
-                <span>LTP: ₹{position.ltp}</span>
-                <span className={position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}>
-                  {position.pnl >= 0 ? '+' : ''}₹{position.pnl}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };

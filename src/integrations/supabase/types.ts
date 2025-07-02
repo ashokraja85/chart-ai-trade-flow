@@ -141,6 +141,48 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_master: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          exchange: string
+          id: string
+          industry: string | null
+          isin: string | null
+          last_updated: string | null
+          market_cap: number | null
+          name: string
+          sector: string | null
+          symbol: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          exchange: string
+          id?: string
+          industry?: string | null
+          isin?: string | null
+          last_updated?: string | null
+          market_cap?: number | null
+          name: string
+          sector?: string | null
+          symbol: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          exchange?: string
+          id?: string
+          industry?: string | null
+          isin?: string | null
+          last_updated?: string | null
+          market_cap?: number | null
+          name?: string
+          sector?: string | null
+          symbol?: string
+        }
+        Relationships: []
+      }
       user_watchlists: {
         Row: {
           created_at: string | null
@@ -165,6 +207,69 @@ export type Database = {
           symbols?: string[]
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      wishlist_stocks: {
+        Row: {
+          added_at: string | null
+          id: string
+          position: number | null
+          stock_symbol: string
+          wishlist_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          id?: string
+          position?: number | null
+          stock_symbol: string
+          wishlist_id: string
+        }
+        Update: {
+          added_at?: string | null
+          id?: string
+          position?: number | null
+          stock_symbol?: string
+          wishlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_stocks_stock_symbol_fkey"
+            columns: ["stock_symbol"]
+            isOneToOne: false
+            referencedRelation: "stock_master"
+            referencedColumns: ["symbol"]
+          },
+          {
+            foreignKeyName: "wishlist_stocks_wishlist_id_fkey"
+            columns: ["wishlist_id"]
+            isOneToOne: false
+            referencedRelation: "wishlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wishlists: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
