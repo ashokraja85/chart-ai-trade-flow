@@ -183,6 +183,78 @@ export type Database = {
         }
         Relationships: []
       }
+      trades: {
+        Row: {
+          amount: number
+          brokerage: number
+          created_at: string
+          exchange: string
+          executed_at: string
+          expiry_date: string | null
+          id: string
+          instrument_type: string
+          net_amount: number
+          option_type: string | null
+          order_id: string
+          pnl: number | null
+          price: number
+          quantity: number
+          status: string
+          strike_price: number | null
+          symbol: string
+          taxes: number
+          transaction_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          brokerage?: number
+          created_at?: string
+          exchange: string
+          executed_at: string
+          expiry_date?: string | null
+          id?: string
+          instrument_type: string
+          net_amount: number
+          option_type?: string | null
+          order_id: string
+          pnl?: number | null
+          price: number
+          quantity: number
+          status?: string
+          strike_price?: number | null
+          symbol: string
+          taxes?: number
+          transaction_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          brokerage?: number
+          created_at?: string
+          exchange?: string
+          executed_at?: string
+          expiry_date?: string | null
+          id?: string
+          instrument_type?: string
+          net_amount?: number
+          option_type?: string | null
+          order_id?: string
+          pnl?: number | null
+          price?: number
+          quantity?: number
+          status?: string
+          strike_price?: number | null
+          symbol?: string
+          taxes?: number
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_watchlists: {
         Row: {
           created_at: string | null

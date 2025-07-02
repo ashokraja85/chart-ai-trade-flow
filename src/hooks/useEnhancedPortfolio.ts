@@ -72,7 +72,7 @@ export const useEnhancedPortfolio = () => {
         .order('executed_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as Trade[];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch trades';
       setError(errorMessage);

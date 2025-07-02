@@ -7,6 +7,7 @@ import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
 import { EnhancedStockChart } from "@/components/EnhancedStockChart";
 import { AIAnalyzer } from "@/components/AIAnalyzer";
 import { ZerodhaAuthButton } from "@/components/ZerodhaAuthButton";
+import { EnhancedPortfolioDashboard } from "@/components/EnhancedPortfolioDashboard";
 import { OrderPlacement } from "@/components/OrderPlacement";
 import { PositionsHoldings } from "@/components/PositionsHoldings";
 import { OrderBook } from "@/components/OrderBook";
@@ -77,7 +78,7 @@ const Dashboard = () => {
         {/* Right Column - Charts and Trading */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="chart" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-slate-800">
+            <TabsList className="grid w-full grid-cols-5 bg-slate-800">
               <TabsTrigger value="chart" className="data-[state=active]:bg-slate-700">
                 Chart
               </TabsTrigger>
@@ -89,6 +90,9 @@ const Dashboard = () => {
               </TabsTrigger>
               <TabsTrigger value="orders" className="data-[state=active]:bg-slate-700">
                 Orders
+              </TabsTrigger>
+              <TabsTrigger value="portfolio" className="data-[state=active]:bg-slate-700">
+                Portfolio
               </TabsTrigger>
             </TabsList>
             
@@ -119,6 +123,10 @@ const Dashboard = () => {
             
             <TabsContent value="orders" className="space-y-4">
               <OrderBook />
+            </TabsContent>
+            
+            <TabsContent value="portfolio" className="space-y-4">
+              <EnhancedPortfolioDashboard />
             </TabsContent>
           </Tabs>
         </div>
