@@ -38,6 +38,7 @@ export const useWishlists = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Searching stocks with query:', query);
 
       const { data, error } = await supabase
         .from('stock_master')
@@ -47,7 +48,11 @@ export const useWishlists = () => {
         .order('symbol')
         .limit(20);
 
-      if (error) throw error;
+      console.log('Stock search result:', { data, error });
+      if (error) {
+        console.error('Stock search error:', error);
+        throw error;
+      }
       return (data || []) as Stock[];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to search stocks';
@@ -62,13 +67,18 @@ export const useWishlists = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching user wishlists...');
 
       const { data, error } = await supabase
         .from('wishlists')
         .select('*')
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      console.log('Wishlists fetch result:', { data, error });
+      if (error) {
+        console.error('Wishlists fetch error:', error);
+        throw error;
+      }
       return data || [];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch wishlists';

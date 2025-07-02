@@ -41,7 +41,9 @@ export const WishlistManager = () => {
 
   const loadWishlists = async () => {
     try {
+      console.log('Loading wishlists...');
       const data = await getUserWishlists();
+      console.log('Wishlists loaded:', data);
       setWishlists(data);
       if (data.length > 0 && !activeWishlist) {
         setActiveWishlist(data[0].id);
