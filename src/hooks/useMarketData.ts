@@ -46,7 +46,7 @@ export const useMarketData = ({
         symbol,
         dataType,
         timeframe: timeframe || 'live',
-        accessToken: accessToken || undefined // Send as accessToken to match edge function
+        accessToken: accessToken && accessToken.trim() !== '' ? accessToken : null
       };
 
       console.log('Request body:', requestBody);
