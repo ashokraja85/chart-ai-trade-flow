@@ -21,7 +21,7 @@ export const useMarketData = ({
   symbol,
   dataType,
   timeframe,
-  refreshInterval = 3000,
+  refreshInterval = 4000,
   accessToken
 }: MarketDataOptions): MarketDataResponse => {
   const [data, setData] = useState<any>(null);

@@ -13,7 +13,7 @@ export const MarketOverview = () => {
     const { data, loading, error } = useMarketData({
       symbol,
       dataType: 'quote',
-      refreshInterval: 3000, // Always refresh to get mock/live data
+      refreshInterval: 4000, // Always refresh to get mock/live data
       accessToken
     });
 

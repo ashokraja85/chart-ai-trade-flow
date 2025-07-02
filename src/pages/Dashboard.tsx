@@ -26,7 +26,7 @@ const Dashboard = () => {
     symbol: selectedSymbol,
     dataType: 'quote',
     accessToken,
-    refreshInterval: 5000
+    refreshInterval: 4000
   });
 
   return (
