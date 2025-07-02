@@ -5,7 +5,7 @@ import { PortfolioView } from "@/components/PortfolioView";
 import { StockSearch } from "@/components/StockSearch";
 import { EnhancedOptionChain } from "@/components/EnhancedOptionChain";
 import { EnhancedStockChart } from "@/components/EnhancedStockChart";
-import { AIAnalyzer } from "@/components/AIAnalyzer";
+import { EnhancedAIAnalyzer } from "@/components/ai/EnhancedAIAnalyzer";
 import { ZerodhaAuthButton } from "@/components/ZerodhaAuthButton";
 import { EnhancedPortfolioDashboard } from "@/components/EnhancedPortfolioDashboard";
 import { OrderPlacement } from "@/components/OrderPlacement";
@@ -102,7 +102,7 @@ const Dashboard = () => {
                   <EnhancedStockChart symbol={selectedSymbol} />
                 </div>
                 <div>
-                  <AIAnalyzer symbol={selectedSymbol} />
+                  <EnhancedAIAnalyzer symbol={selectedSymbol} />
                 </div>
               </div>
             </TabsContent>
